@@ -120,7 +120,6 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
         list->elements[*insertedIdx].next = (int) list->head;
         list->elements[*insertedIdx].prev = 0;
 
-        list->elements[list->head].prev = (int) *insertedIdx;
         list->head = *insertedIdx;
     }
     else if (list->elements[idx].next == kListStart)
@@ -144,6 +143,51 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
     return LIST_ERROR_OK;
 }
 
+int ListDelete (list_t *list, size_t idx)
+{
+    assert (list);
+
+    if (list->head == kListStart)
+    {
+        ERROR_LOG ("%s", "List is empty, but you are trying to delete something...");
+
+        return 1;
+    }
+    if (list->elements[idx].prev == -1)
+    {
+        ERROR_LOG ("%s", "Trying to delete free element... Are you okay?");
+
+        return 1;
+    }
+
+    int prevIdx = list->elements[idx].prev;
+    int nextIdx = list->elements[idx].next;
+
+    if (prevIdx == 0)
+    {
+        list->elements[nextIdx].prev = prevIdx;
+
+        list->head = (size_t) list->elements[idx].next;
+    }
+    else if (nextIdx == 0)
+    {
+        list->elements[prevIdx].next = nextIdx;
+    }
+    else
+    {
+        list->elements[nextIdx].prev = prevIdx;
+        list->elements[prevIdx].next = nextIdx;
+    }
+
+    list->elements[idx].data = kListPoison;
+    list->elements[idx].next = (int) list->free;
+    list->elements[idx].prev = -1;
+
+    list->free = idx;
+
+    return LIST_ERROR_OK;
+}
+
 int ListDump (list_t *list, const char *comment,
               const char *FILE_, int LINE_, const char *FUNC_)
 {
@@ -154,8 +198,26 @@ int ListDump (list_t *list, const char *comment,
              "%s {%s:%d}\n",
              list->varInfo.name, list->varInfo.file, list->varInfo.line);
 
+    fprintf (list->log.logFile, "list->len = %lu\n", list->len);
+
+    fprintf (list->log.logFile, "%s", "list->data: ");
+    for (size_t i = 0; i < list->len; i++)
+        fprintf (list->log.logFile, "%4g, ", list->elements[i].data);
+
+    fprintf (list->log.logFile, "%s", "\nlist->next: ");
+    for (size_t i = 0; i < list->len; i++)
+        fprintf (list->log.logFile, "%4d, ", list->elements[i].next);
+
+    fprintf (list->log.logFile, "%s", "\nlist->prev: ");
+    for (size_t i = 0; i < list->len; i++)
+        fprintf (list->log.logFile, "%4d, ", list->elements[i].prev);
+
+    fprintf (list->log.logFile, "%s", "\n");
+
     ListDumpImg (list);
 
+    fprintf (list->log.logFile, "%s", "<hr>\n\n");
+    
     return LIST_ERROR_OK;
 }
 
@@ -176,11 +238,10 @@ int ListDumpImg (list_t *list)
     imageCounter++;
 
     CREATE_FILE_OR_RETURN (list->log.graphFile, list->log.graphFilePath);
-
 #undef CREATE_DIR_OR_RETURN
 
     fprintf (list->log.graphFile, "%s", "digraph G {\n"
-                                        "rankdir=LR;\n");
+                                        "\trankdir=LR;\n");
 
     for (size_t i = 0; i < list->len; i++)
     {
@@ -188,7 +249,7 @@ int ListDumpImg (list_t *list)
                  "\telement%lu [shape=Mrecord; label = \"{data = [%g] | next = [%d] | prev = [%d]}\"];\n",
                  i, list->elements[i].data, list->elements[i].next, list->elements[i].prev);
     }
-    fprintf (list->log.graphFile, "%s", "\tedge [style=invis];\n"
+    fprintf (list->log.graphFile, "%s", "\tedge [color=invis];\n"
                                         "\t");
     for (size_t i = 0; i < list->len - 1; i++)
     {
@@ -209,8 +270,31 @@ int ListDumpImg (list_t *list)
             fprintf (list->log.graphFile, "element%lu->", i);
     }
 
-    fprintf (list->log.graphFile, "%s", "}");
+    fprintf (list->log.graphFile, "%s", "\t");
+    size_t i = list->head;
+    for (i = list->head; ; i = (size_t) list->elements[i].next)
+    {
+        if (list->elements[i].next == kListStart)
+        {
+            fprintf (list->log.graphFile, "element%lu[color=red];\n", i);
+            break;
+        }
+        else
+            fprintf (list->log.graphFile, "element%lu->", i);
+    }
 
+    for (size_t j = i; ; j = (size_t) list->elements[j].prev)
+    {
+        if (list->elements[j].prev == kListStart)
+        {
+            fprintf (list->log.graphFile, "element%lu[color=blue];\n", j);
+            break;
+        }
+        else
+            fprintf (list->log.graphFile, "element%lu->", j);
+    }
+
+    fprintf (list->log.graphFile, "%s", "}");
     fclose (list->log.graphFile);
 
     char imgFileName[kImgNameLen] = {}; // FIXME: looks like shit tbh

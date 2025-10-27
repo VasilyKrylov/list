@@ -8,7 +8,7 @@
 typedef double listDataType;
 
 static const int kListStart = 0;
-static const listDataType kListPoison = 666;
+static const listDataType kListPoison = -666;
 static const size_t kListMaxLen = (1UL << 32);
 
 static const char kParentDumpFolderName[] = "dump/";
@@ -95,6 +95,7 @@ enum listError_t
 int ListCtor    (list_t *list, size_t len
                  ON_DEBUG (,varInfo_t varInfo));
 int ListInsert  (list_t *list, size_t idx, listDataType val, size_t *insertedIdx);
+int ListDelete  (list_t *list, size_t idx);
 int ListDump    (list_t *list, const char *comment,
                  const char *_FILE, int _LINE, const char * _FUNC);
 void ListDtor   (list_t *list);

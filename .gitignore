@@ -2,4 +2,3 @@ program
 tmp*
 *.out
 dump/*
-dump/*/*
