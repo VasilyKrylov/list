@@ -92,10 +92,11 @@ enum listError_t
 
 #define LIST_DUMP(listName, comment) ListDump (&listName, comment, __FILE__, __LINE__, __func__)
 
-int ListCtor (list_t *list, size_t len
-              ON_DEBUG (,varInfo_t varInfo));
-int ListDump (list_t *list, const char *comment,
-              const char *_FILE, int _LINE, const char * _FUNC);
-void ListDtor (list_t *list);
+int ListCtor    (list_t *list, size_t len
+                 ON_DEBUG (,varInfo_t varInfo));
+int ListInsert  (list_t *list, size_t idx, listDataType val, size_t *insertedIdx);
+int ListDump    (list_t *list, const char *comment,
+                 const char *_FILE, int _LINE, const char * _FUNC);
+void ListDtor   (list_t *list);
 
 #endif //K_LIST_H

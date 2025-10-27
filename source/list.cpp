@@ -27,7 +27,7 @@ int ListCtor (list_t *list, size_t len
                COMMON_ERROR_ALLOCATING_MEMORY;
 
     list->free = 1;
-    list->head = 1;
+    list->head = 0;
     list->len  = len;
 
     list->elements[0] = {.data = 0, .next = 0, .prev = 0};
@@ -98,6 +98,52 @@ int ListCtor (list_t *list, size_t len
     return LIST_ERROR_OK;
 }
 
+int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
+{
+    assert (list);
+
+    if (list->free == kListStart)
+    {
+        ERROR_LOG ("%s", "List is full");
+
+        return 1;
+    }
+
+    *insertedIdx = list->free;
+    list->elements[*insertedIdx].data = val;
+    
+    list->free = (size_t) list->elements[list->free].next;
+
+
+    if (idx == kListStart)
+    {
+        list->elements[*insertedIdx].next = (int) list->head;
+        list->elements[*insertedIdx].prev = 0;
+
+        list->elements[list->head].prev = (int) *insertedIdx;
+        list->head = *insertedIdx;
+    }
+    else if (list->elements[idx].next == kListStart)
+    {
+        list->elements[*insertedIdx].next = (int) kListStart;
+        list->elements[*insertedIdx].prev = (int) idx;
+
+        list->elements[idx].next = (int)*insertedIdx;
+    }
+    else
+    {
+        list->elements[*insertedIdx].next = list->elements[idx].next;
+        list->elements[*insertedIdx].prev = (int) idx;
+
+        int nextIdx = list->elements[idx].next;
+        list->elements[nextIdx].prev = (int) *insertedIdx;
+
+        list->elements[idx].next =  (int) *insertedIdx;
+    }
+    
+    return LIST_ERROR_OK;
+}
+
 int ListDump (list_t *list, const char *comment,
               const char *FILE_, int LINE_, const char *FUNC_)
 {
@@ -113,8 +159,26 @@ int ListDump (list_t *list, const char *comment,
     return LIST_ERROR_OK;
 }
 
+#define CREATE_FILE_OR_RETURN(file, name)                       \
+        do {                                                    \
+            file  = fopen (name, "w+");                         \
+            if (file == NULL)                                   \
+            {                                                   \
+                ERROR_LOG ("Error opening file \"%s\"", name);  \
+                return LIST_ERROR_COMMON |                      \
+                    COMMON_ERROR_OPENING_FILE;                  \
+            }                                                   \
+        } while(0)
+
 int ListDumpImg (list_t *list)
 {
+    static size_t imageCounter = 0;
+    imageCounter++;
+
+    CREATE_FILE_OR_RETURN (list->log.graphFile, list->log.graphFilePath);
+
+#undef CREATE_DIR_OR_RETURN
+
     fprintf (list->log.graphFile, "%s", "digraph G {\n"
                                         "rankdir=LR;\n");
 
@@ -133,29 +197,52 @@ int ListDumpImg (list_t *list)
     fprintf (list->log.graphFile, "element%lu;\n", list->len - 1);
     fprintf (list->log.graphFile, "%s", "\tedge [style=\"\"];\n");
 
+    fprintf (list->log.graphFile, "%s", "\t");
+    for (size_t i = list->free; ; i = (size_t) list->elements[i].next)
+    {
+        if (list->elements[i].next == kListStart)
+        {
+            fprintf (list->log.graphFile, "element%lu[color=green];\n", i);
+            break;
+        }
+        else
+            fprintf (list->log.graphFile, "element%lu->", i);
+    }
+
     fprintf (list->log.graphFile, "%s", "}");
 
-    char imgFileName[kImgNameLen] = {}; // FIXME: looks like shit tbh
-    GetTimeStamp (imgFileName);
-    strcat(imgFileName, ".svg");
+    fclose (list->log.graphFile);
 
-    char command[256] = {}; // FXIME: fixed size len
+    char imgFileName[kImgNameLen] = {}; // FIXME: looks like shit tbh
+    sprintf (imgFileName, "%lu", imageCounter);
+    strcat (imgFileName, ".svg"); 
+
+    char command[256] = {}; // FXIME: magic number
 
     strcat (command, "dot ");
     strcat (command, list->log.logFolderPath);
     strcat (command, kGraphFileName);
     strcat (command, " -T svg -o ");
     strcat (command, list->log.imgFolderPath);
-    strcat (command, imgFileName);
+    strcat (command, imgFileName); // FIXME: ABSOLUTLY HORRIBLE! COMPLEXITY IS 0(n^2)!!!!!!!!!!!!!!
 
-    DEBUG_VAR ("%s", command);
-    system (command);
-    DEBUG_VAR ("%s", command);
+    int status = system (command);
+    DEBUG_VAR ("%d", status);
+    if (status != 0)
+    {
+        ERROR_LOG ("ERROR executing command \"%s\"", command);
+        
+        return LIST_ERROR_COMMON |
+               COMMON_ERROR_RUNNING_SYSTEM_COMMAND;
+    }
 
     fprintf (list->log.logFile,
              "<img src=\"img/%s\" hieght=\"500\">\n",
              imgFileName);
 
+
+    DEBUG_VAR ("%s", command);
+    
     return LIST_ERROR_OK;
 }
 
@@ -168,7 +255,7 @@ void ListDtor (list_t *list)
     fprintf (list->log.logFile, "%s", "</pre>\n");
 
     fclose (list->log.logFile);
-    fclose (list->log.graphFile);
+    // fclose (list->log.graphFile);
 #endif // PRINT_DEBUG
 }
 
