@@ -6,7 +6,6 @@
 
 int main()
 {
-
     list_t list;
     LIST_CTOR (list, 10);
 
