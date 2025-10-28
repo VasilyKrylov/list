@@ -10,6 +10,11 @@
 #include "list.h"
 #include "file_utils.h"
 
+const char *blue        = "6666ff";
+const char *darkBlue    = "000099";
+const char *green       = "33cc33";
+const char *darkGreen   = "006600";
+
 void GetTimeStamp (char *str);
 int ListDumpImg (list_t *list);
 
@@ -37,7 +42,7 @@ int ListCtor (list_t *list, size_t len
         list->elements[i].prev = -1;
         list->elements[i].next = (int)i + 1;
     }
-    list->elements[len - 1] = {.data = kListPoison, .next = 0, .prev = 0};
+    list->elements[len - 1] = {.data = kListPoison, .next = 0, .prev = -1};
 
 
 #ifdef PRINT_DEBUG
@@ -107,6 +112,13 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
         ERROR_LOG ("%s", "List is full");
 
         return 1;
+    }
+
+    if (list->elements[idx].prev == -1)
+    {
+        ERROR_LOG ("%s", "Can't insert after empty element :(");
+
+        
     }
 
     *insertedIdx = list->free;
@@ -199,6 +211,8 @@ int ListDump (list_t *list, const char *comment,
              list->varInfo.name, list->varInfo.file, list->varInfo.line);
 
     fprintf (list->log.logFile, "list->len = %lu\n", list->len);
+    fprintf (list->log.logFile, "list->head = %lu\n", list->head);
+    fprintf (list->log.logFile, "list->free = %lu\n", list->free);
 
     fprintf (list->log.logFile, "%s", "list->data: ");
     for (size_t i = 0; i < list->len; i++)
@@ -245,9 +259,19 @@ int ListDumpImg (list_t *list)
 
     for (size_t i = 0; i < list->len; i++)
     {
+        const char *color = blue;
+        if (i == list->head)
+            color = darkBlue;
+        else if (i == list->free)
+            color = darkGreen;
+        else if (list->elements[i].prev == -1)
+            color = green;  // green
+        
         fprintf (list->log.graphFile,
-                 "\telement%lu [shape=Mrecord; label = \"{data = [%g] | next = [%d] | prev = [%d]}\"];\n",
-                 i, list->elements[i].data, list->elements[i].next, list->elements[i].prev);
+                 "\telement%lu [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\"; "
+                 "label = \"data = [%g] | next = [%d] | prev = [%d]\"];\n",
+                 i, color,
+                 list->elements[i].data, list->elements[i].next, list->elements[i].prev);
     }
     fprintf (list->log.graphFile, "%s", "\tedge [color=invis];\n"
                                         "\t");
@@ -298,17 +322,19 @@ int ListDumpImg (list_t *list)
     fclose (list->log.graphFile);
 
     char imgFileName[kImgNameLen] = {}; // FIXME: looks like shit tbh
-    sprintf (imgFileName, "%lu", imageCounter);
-    strcat (imgFileName, ".svg"); 
+    sprintf (imgFileName, "%lu.svg", imageCounter);
 
     char command[256] = {}; // FXIME: magic number
 
-    strcat (command, "dot ");
-    strcat (command, list->log.logFolderPath);
-    strcat (command, kGraphFileName);
-    strcat (command, " -T svg -o ");
-    strcat (command, list->log.imgFolderPath);
-    strcat (command, imgFileName); // FIXME: ABSOLUTLY HORRIBLE! COMPLEXITY IS 0(n^2)!!!!!!!!!!!!!!
+    sprintf (command, "dot %s%s -T svg -o %s%s", 
+              list->log.logFolderPath, kGraphFileName,
+              list->log.imgFolderPath, imgFileName);
+    // strcat (command, "dot ");
+    // strcat (command, list->log.logFolderPath);
+    // strcat (command, kGraphFileName);
+    // strcat (command, " -T svg -o ");
+    // strcat (command, list->log.imgFolderPath);
+    // strcat (command, imgFileName); // FIXME: ABSOLUTLY HORRIBLE! COMPLEXITY IS 0(n^2)!!!!!!!!!!!!!!
 
     int status = system (command);
     DEBUG_VAR ("%d", status);
@@ -323,7 +349,6 @@ int ListDumpImg (list_t *list)
     fprintf (list->log.logFile,
              "<img src=\"img/%s\" hieght=\"500\">\n",
              imgFileName);
-
 
     DEBUG_VAR ("%s", command);
     

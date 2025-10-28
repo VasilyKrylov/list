@@ -42,7 +42,7 @@ int Test2 (list_t *list)
 {
     size_t idx = 0;
 
-    for (size_t i = 0; i < list->len - 1 + 500; i++)
+    for (size_t i = 0; i < list->len - 1; i++)
     {
         DO_AND_CHECK (ListInsert (list, i, (listDataType)(100 * i + i), &idx));
         LIST_DUMP (*list, "After another insert");
@@ -86,9 +86,10 @@ int main()
 
     LIST_DUMP (list, "After ctor");
 
-    // Test1 (&list);
     Test2 (&list);
-    // Test3 (&list);
+    Test3 (&list);
+    
+    Test1 (&list);
     // Test4 (&list);
 
     ListDtor (&list);

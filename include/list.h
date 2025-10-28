@@ -86,6 +86,7 @@ enum listError_t
     LIST_ERROR_NULL_STRUCT     = 1 << 0,
     LIST_ERROR_NULL_DATA       = 1 << 1,
     LIST_ERROR_BIG_LEN         = 1 << 2,
+    LIST_ERROR_INSERT_AFTER    = 1 << 3,
 
     LIST_ERROR_COMMON          = 1 << 31
 };
