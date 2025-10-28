@@ -9,6 +9,7 @@
 
 #include "list.h"
 #include "file_utils.h"
+#include "float_math.h"
 
 const char *blue        = "6666ff";
 const char *darkBlue    = "000099";
@@ -38,10 +39,10 @@ int ListCtor (list_t *list, size_t len
     for (size_t i = 1; i < len - 1; i++)
     {
         list->elements[i].data = kListPoison;
-        list->elements[i].prev = -1;
+        list->elements[i].prev = kListPrevFree;
         list->elements[i].next = (int)i + 1;
     }
-    list->elements[len - 1] = {.data = kListPoison, .next = 0, .prev = -1};
+    list->elements[len - 1] = {.data = kListPoison, .next = 0, .prev = kListPrevFree};
 
 
 #ifdef PRINT_DEBUG
@@ -99,12 +100,20 @@ int ListCtor (list_t *list, size_t len
 
 #endif // PRING_DEBUG
 
-    return LIST_ERROR_OK;
+    LIST_DUMP (*list, "After ctor");
+
+    return LIST_VERIFY (list);
 }
 
 int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
 {
     assert (list);
+
+    char comment[kMaxCommentLen] = {};
+    snprintf (comment, kMaxCommentLen, "before Insert() [%lu], val = %g", idx, val);
+    LIST_DUMP (*list, comment);
+
+    DO_AND_CHECK (LIST_VERIFY (list));
 
     if (list->free == kListStart)
     {
@@ -113,7 +122,7 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
         return 1;
     }
 
-    if (list->elements[idx].prev == -1)
+    if (list->elements[idx].prev == kListPrevFree)
     {
         ERROR_LOG ("%s", "Can't insert after empty element :(");
 
@@ -158,13 +167,21 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
 
         list->elements[idx].next =  (int) *insertedIdx;
     }
+
+    LIST_DUMP (*list, "after Insert()");
     
-    return LIST_ERROR_OK;
+    return LIST_VERIFY (list);
 }
 
 int ListDelete (list_t *list, size_t idx)
 {
     assert (list);
+
+    char comment[kMaxCommentLen] = {};
+    snprintf (comment, kMaxCommentLen, "before Delete() [%lu]", idx);
+    LIST_DUMP (*list, comment);
+
+    DO_AND_CHECK (LIST_VERIFY (list));
 
     if (list->head == kListStart)
     {
@@ -172,10 +189,9 @@ int ListDelete (list_t *list, size_t idx)
 
         return 1;
     }
-    if (list->elements[idx].prev == -1)
+    if (list->elements[idx].prev == kListPrevFree)
     {
         ERROR_LOG ("%s", "Trying to delete free element... Are you okay?");
-
         return 1;
     }
 
@@ -200,16 +216,26 @@ int ListDelete (list_t *list, size_t idx)
 
     list->elements[idx].data = kListPoison;
     list->elements[idx].next = (int) list->free;
-    list->elements[idx].prev = -1;
+    list->elements[idx].prev = kListPrevFree;
 
     list->free = idx;
 
-    return LIST_ERROR_OK;
+    LIST_DUMP (*list, "after Delte()");
+
+    return LIST_VERIFY (list);
 }
 
 int ListDump (list_t *list, const char *comment,
               const char *FILE_, int LINE_, const char *FUNC_)
 {
+    assert(list);
+    assert(comment);
+    assert(FILE_);
+    assert(FUNC_);
+
+    DEBUG_PRINT ("%s", "\n");
+    DEBUG_LOG ("comment = \"%s\";", comment);
+
     fprintf (list->log.logFile,
              "<h3>DUMP called at %s:%d:%s(): %s</h3>\n",
              FILE_, LINE_, FUNC_, comment);
@@ -271,7 +297,7 @@ int ListDumpImg (list_t *list)
             color = darkBlue;
         else if (i == list->free)
             color = darkGreen;
-        else if (list->elements[i].prev == -1)
+        else if (list->elements[i].prev == kListPrevFree)
             color = green;  // green
         
         fprintf (list->log.graphFile,
@@ -336,12 +362,6 @@ int ListDumpImg (list_t *list)
     sprintf (command, "dot %s%s -T svg -o %s%s", 
               list->log.logFolderPath, kGraphFileName,
               list->log.imgFolderPath, imgFileName);
-    // strcat (command, "dot ");
-    // strcat (command, list->log.logFolderPath);
-    // strcat (command, kGraphFileName);
-    // strcat (command, " -T svg -o ");
-    // strcat (command, list->log.imgFolderPath);
-    // strcat (command, imgFileName); // FIXME: ABSOLUTLY HORRIBLE! COMPLEXITY IS 0(n^2)!!!!!!!!!!!!!!
 
     int status = system (command);
     DEBUG_VAR ("%d", status);
@@ -364,6 +384,8 @@ int ListDumpImg (list_t *list)
 
 void ListDtor (list_t *list)
 {
+    assert (list);
+
     free (list->elements);
     list->elements = NULL;
 
@@ -377,10 +399,60 @@ void ListDtor (list_t *list)
 
 int ListVerify (list_t *list)
 {
-    for (size_t i = list->head; list->elements[i].next != kListStart; i++)
+    assert (list);
+    
+    int error = LIST_ERROR_OK;
+
+    int nextAfterHead = list->elements[list->head].next;
+    int idx = nextAfterHead;
+
+    DEBUG_LOG ("%s", "Check next edges:");
+
+    for (idx = nextAfterHead; list->elements[idx].next != kListStart; idx = list->elements[idx].next)
     {
+        DEBUG_VAR ("%d", idx);
+
+        int prevIdx = list->elements[idx].prev;
+
+        if (list->elements[prevIdx].next != idx)
+        {
+            ERROR_LOG ("Next edge between [%d] and [%d] elements is broken",
+                       idx, prevIdx);
+            ERROR_LOG ("list->elements[%d].prev = %d;", idx, list->elements[idx].prev);
+
+            error |= LIST_ERROR_BROKEN_NEXT_EDGE;
+        }
+    }
+
+    DEBUG_LOG ("%s", "Check prev edges:");
+
+    for (; list->elements[idx].prev != kListStart; idx = list->elements[idx].prev)
+    {
+        DEBUG_VAR ("%d", idx);
+        int nextIdx = list->elements[idx].next;
+
+        if (nextIdx == 0)
+            break;
+
+        if (list->elements[nextIdx].prev != idx)
+        {
+            ERROR_LOG ("Prev edge between [%d] and [%d] elements is broken",
+                       idx, nextIdx);
+            ERROR_LOG ("list->elements[%d].next = %d;", idx, list->elements[idx].next);
+            ERROR_LOG ("list->elements[%d].prev = %d;", nextIdx, list->elements[idx].prev);
+
+            error |= LIST_ERROR_BROKEN_PREV_EDGE;
+        }
+
+
+        if (IsEqual(list->elements[idx].data, kListPoison))
+        {
+            ERROR_LOG ("Poison data in data element [%d]", idx);
+
+            error |= LIST_ERROR_POISON_IN_DATA;
+        }
 
     }
 
-    return LIST_ERROR_OK;
+    return error;
 }

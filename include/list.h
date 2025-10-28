@@ -7,9 +7,10 @@
 
 typedef double listDataType;
 
-static const int kListStart = 0;
-static const listDataType kListPoison = -666;
-static const size_t kListMaxLen = (1UL << 32);
+static const int kListStart             = 0;
+static const int kListPrevFree          = -1;
+static const listDataType kListPoison   = -666;
+static const size_t kListMaxLen         = (1UL << 32);
 
 static const char kParentDumpFolderName[] = "dump/";
 static const char kImgFolderName[]        = "img/";
@@ -27,6 +28,8 @@ static const size_t kLogFolderPathLen      = sizeof (kParentDumpFolderName) + kD
 static const size_t kLogFilePathLen        = kLogFolderPathLen + sizeof (kLogFileName);
 static const size_t kGraphFilePathLen      = kLogFolderPathLen + sizeof (kGraphFileName);
 static const size_t kImgFolderPathLen      = kLogFolderPathLen + sizeof (kImgFolderName) + kImgNameLen;
+
+static const size_t kMaxCommentLen         = 64;
 
 #ifdef PRINT_DEBUG
 struct varInfo_t
@@ -51,10 +54,16 @@ struct listLog_t
                                             varInfo_t{.name = #listName,            \
                                                       .file = __FILE__,             \
                                                       .line = __LINE__,             \
-                                                      .func = __func__});
+                                                      .func = __func__})
+#define LIST_VERIFY(list) ListVerify(list)
+#define LIST_DUMP(listName, comment) ListDump (&listName, comment, __FILE__, __LINE__, __func__)
 
 #else
-    #define LIST_CTOR(listName, size) ListCtor (&listName, size);
+
+#define LIST_CTOR(listName, size) ListCtor (&listName, size);
+#define LIST_VERIFY(list) LIST_ERROR_OK;
+#define LIST_DUMP(list, comment)
+
 #endif // PRING_DEBUG
 
 struct listElement_t
@@ -87,11 +96,13 @@ enum listError_t
     LIST_ERROR_NULL_DATA                = 1 << 1,
     LIST_ERROR_BIG_LEN                  = 1 << 2,
     LIST_ERROR_INSERT_AFTER_EMPTY       = 1 << 3,
+    LIST_ERROR_BROKEN_NEXT_EDGE         = 1 << 4,
+    LIST_ERROR_BROKEN_PREV_EDGE         = 1 << 5,
+    LIST_ERROR_BROKEN_FREE_ELEMENT      = 1 << 6,
+    LIST_ERROR_POISON_IN_DATA           = 1 << 7,
 
     LIST_ERROR_COMMON                   = 1 << 31
 };
-
-#define LIST_DUMP(listName, comment) ListDump (&listName, comment, __FILE__, __LINE__, __func__)
 
 int ListCtor    (list_t *list, size_t len
                  ON_DEBUG (,varInfo_t varInfo));
