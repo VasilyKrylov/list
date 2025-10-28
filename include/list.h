@@ -82,13 +82,13 @@ struct list_t
 
 enum listError_t
 {
-    LIST_ERROR_OK              = 0,
-    LIST_ERROR_NULL_STRUCT     = 1 << 0,
-    LIST_ERROR_NULL_DATA       = 1 << 1,
-    LIST_ERROR_BIG_LEN         = 1 << 2,
-    LIST_ERROR_INSERT_AFTER    = 1 << 3,
+    LIST_ERROR_OK                       = 0,
+    LIST_ERROR_NULL_STRUCT              = 1 << 0,
+    LIST_ERROR_NULL_DATA                = 1 << 1,
+    LIST_ERROR_BIG_LEN                  = 1 << 2,
+    LIST_ERROR_INSERT_AFTER_EMPTY       = 1 << 3,
 
-    LIST_ERROR_COMMON          = 1 << 31
+    LIST_ERROR_COMMON                   = 1 << 31
 };
 
 #define LIST_DUMP(listName, comment) ListDump (&listName, comment, __FILE__, __LINE__, __func__)
@@ -99,6 +99,7 @@ int ListInsert  (list_t *list, size_t idx, listDataType val, size_t *insertedIdx
 int ListDelete  (list_t *list, size_t idx);
 int ListDump    (list_t *list, const char *comment,
                  const char *_FILE, int _LINE, const char * _FUNC);
+int ListVerify  (list_t *list);
 void ListDtor   (list_t *list);
 
 #endif //K_LIST_H

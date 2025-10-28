@@ -15,7 +15,6 @@ const char *darkBlue    = "000099";
 const char *green       = "33cc33";
 const char *darkGreen   = "006600";
 
-void GetTimeStamp (char *str);
 int ListDumpImg (list_t *list);
 
 int ListCtor (list_t *list, size_t len
@@ -118,7 +117,7 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
     {
         ERROR_LOG ("%s", "Can't insert after empty element :(");
 
-        
+        return LIST_ERROR_INSERT_AFTER_EMPTY;
     }
 
     *insertedIdx = list->free;
@@ -126,9 +125,17 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
     
     list->free = (size_t) list->elements[list->free].next;
 
-
-    if (idx == kListStart)
+    if (idx == kListStart && list->head == kListStart) // FIXME:
     {
+        list->elements[*insertedIdx].next = (int) list->head;
+        list->elements[*insertedIdx].prev = 0;
+
+        list->head = *insertedIdx;
+    }
+    else if (idx == kListStart) 
+    {
+        list->elements[list->head].prev = (int)*insertedIdx;
+
         list->elements[*insertedIdx].next = (int) list->head;
         list->elements[*insertedIdx].prev = 0;
 
@@ -368,13 +375,12 @@ void ListDtor (list_t *list)
 #endif // PRINT_DEBUG
 }
 
-void GetTimeStamp (char *str)
+int ListVerify (list_t *list)
 {
-    time_t t = time (NULL);
-    tm tm = *localtime (&t);
+    for (size_t i = list->head; list->elements[i].next != kListStart; i++)
+    {
 
-    // NOTE: not safe at all
-    sprintf (str, "%d-%02d-%02d_%02d:%02d:%02d",
-             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-             tm.tm_hour,        tm.tm_min,     tm.tm_sec);
+    }
+
+    return LIST_ERROR_OK;
 }
