@@ -29,7 +29,7 @@ int Test2 (list_t *list)
 {
     size_t idx = 0;
 
-    for (size_t i = 0; i < list->len - 1; i++)
+    for (size_t i = 0; i < list->capacity - 1; i++)
     {
         DO_AND_CHECK (ListInsert (list, i, (listDataType)(100 * i + i), &idx));
     }
@@ -38,7 +38,7 @@ int Test2 (list_t *list)
 }
 int Test3 (list_t *list)
 {
-    for (size_t i = 1; i < list->len; i++)
+    for (size_t i = 1; i < list->capacity; i++)
     {
         DO_AND_CHECK (ListDelete (list, i));
     }
@@ -49,7 +49,7 @@ int Test4 (list_t *list)
 {
     size_t idx = 0;
 
-    for (size_t i = 0; i < list->len - 1; i++)
+    for (size_t i = 0; i < list->capacity - 1; i++)
     {
         DO_AND_CHECK (ListInsert (list, i, (listDataType)(100 * i + i), &idx));
     }
@@ -62,21 +62,20 @@ int Test4 (list_t *list)
 }
 
 // TODO: realloc() up (down is optional)
-// TODO: auto dump before and after
+// TODO: auto dump before and after 
 // TODO: Next() and Prev()
+// TODO: InsertBefore
 int main()
 {
     list_t list;
     LIST_CTOR (list, 6);
 
-    Test2 (&list);
-
-    // ListDelete (&list, 0);
-    ListDelete (&list, 1);
-    ListDelete (&list, 4);
-    ListDelete (&list, 2);
-    ListDelete (&list, 3);
-    ListDelete (&list, 5);
+    int status = Test1 (&list);
+    if (status != LIST_ERROR_OK)
+    {
+        ListDtor (&list);
+        return status;
+    }
 
     // Test3 (&list);
 

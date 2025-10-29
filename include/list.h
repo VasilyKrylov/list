@@ -7,29 +7,16 @@
 
 typedef double listDataType;
 
-static const int kListStart             = 0;
-static const int kListPrevFree          = -1;
-static const listDataType kListPoison   = -666;
-static const size_t kListMaxLen         = (1UL << 32);
+const size_t kListStart          = 0;
+const size_t kHead               = kListStart;
+// maybe this should be one variable, but I don't want to use F2 on kListStart
+// for example it is strange, that list of free elements ends in head
 
-static const char kParentDumpFolderName[] = "dump/";
-static const char kImgFolderName[]        = "img/";
-static const char kLogFileName[]          = "log.html";
-static const char kGraphFileName[]        = "dot.txt";
+const ssize_t kListPrevFree      = -1;
+const listDataType kListPoison   = -666;
+const size_t kListMaxLen         = (1UL << 32);
 
-
-static const size_t kTimeDateLen           = sizeof ("2024-01-01_19:19:19");
-
-static const size_t kDumpFolderNameLen     = sizeof ("2024-01-01_19:19:19/");
-static const size_t kImgFolderNameLen      = kDumpFolderNameLen + sizeof (kImgFolderName);
-static const size_t kImgNameLen            = sizeof ("2024-01-01_19:19:19.svg"); // FIMXE: check extension
-
-static const size_t kLogFolderPathLen      = sizeof (kParentDumpFolderName) + kDumpFolderNameLen;
-static const size_t kLogFilePathLen        = kLogFolderPathLen + sizeof (kLogFileName);
-static const size_t kGraphFilePathLen      = kLogFolderPathLen + sizeof (kGraphFileName);
-static const size_t kImgFolderPathLen      = kLogFolderPathLen + sizeof (kImgFolderName) + kImgNameLen;
-
-static const size_t kMaxCommentLen         = 64;
+const size_t kMaxCommentLen         = 64;
 
 #ifdef PRINT_DEBUG
 struct varInfo_t
@@ -70,8 +57,8 @@ struct listElement_t
 {
     listDataType data = kListPoison;
 
-    int next = 0;
-    int prev = 0;
+    ssize_t next = 0; // to be the same type as prev
+    ssize_t prev = 0; // -1 for free elements
 };
 
 struct list_t
@@ -79,7 +66,7 @@ struct list_t
     listElement_t *elements = NULL;
 
     size_t free = 1;
-    size_t head = 0;
+    size_t capacity = 0;
     size_t len = 0;
 
 #ifdef PRINT_DEBUG
@@ -100,13 +87,15 @@ enum listError_t
     LIST_ERROR_BROKEN_PREV_EDGE         = 1 << 5,
     LIST_ERROR_BROKEN_FREE_ELEMENT      = 1 << 6,
     LIST_ERROR_POISON_IN_DATA           = 1 << 7,
+    LIST_ERROR_DELETE_IN_EMPTY_LIST     = 1 << 8,
+    LIST_ERROR_DELETE_EMPTY_ELEMENT     = 1 << 9,
 
     LIST_ERROR_COMMON                   = 1 << 31
 };
 
-int ListCtor    (list_t *list, size_t len
+int ListCtor    (list_t *list, size_t capacity
                  ON_DEBUG (,varInfo_t varInfo));
-int ListInsert  (list_t *list, size_t idx, listDataType val, size_t *insertedIdx);
+int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx);
 int ListDelete  (list_t *list, size_t idx);
 int ListDump    (list_t *list, const char *comment,
                  const char *_FILE, int _LINE, const char * _FUNC);
