@@ -12,14 +12,19 @@
 
 const char * const kGray        = "666666"; // TODO:
 const char * const kBlue        = "6666ff";
-const char * const kDarkBlue    = "000099";
+const char * const kDarkBlue    = "3333ff";
 const char * const kGreen       = "33cc33";
 const char * const kDarkGreen   = "006600";
+const char * const kYellow      = "ffcc00";
 
 int ListDumpImg     (list_t *list);
 int DumpMakeConfig  (list_t *list);
 int DumpMakeImg     (list_t *list);
+int ResizeElements  (list_t *list);
 
+// not used now:
+size_t ListGetHead (list_t *list);
+size_t ListGetTail (list_t *list);
 
 int ListCtor (list_t *list, size_t capacity
               ON_DEBUG (, varInfo_t varInfo))
@@ -29,7 +34,8 @@ int ListCtor (list_t *list, size_t capacity
     if (capacity > kListMaxLen)
         return LIST_ERROR_BIG_LEN;
 
-    list->elements = (listElement_t *) calloc (capacity, sizeof(listElement_t));
+    // + 1 for null element
+    list->elements = (listElement_t *) calloc (capacity + 1, sizeof(listElement_t));
     if (list->elements == NULL)
         return LIST_ERROR_COMMON |
                COMMON_ERROR_ALLOCATING_MEMORY;
@@ -39,20 +45,20 @@ int ListCtor (list_t *list, size_t capacity
     list->len = 0;
 
     list->elements[0] = {.data = 0, .next = 0, .prev = 0};
-    for (size_t i = 1; i < capacity - 1; i++)
+    for (size_t i = 1; i < capacity + 1; i++)
     {
         list->elements[i].data = kListPoison;
         list->elements[i].prev = kListPrevFree;
         list->elements[i].next = (int)i + 1;
     }
-    list->elements[capacity - 1] = {.data = kListPoison, .next = 0, .prev = kListPrevFree};
-
+    list->elements[capacity] = {.data = kListPoison, .next = 0, .prev = kListPrevFree};
 
 #ifdef PRINT_DEBUG
     list->varInfo = varInfo;
 
-    LogInit ()
-
+    int status = LogInit (&list->log);
+    if (status != LIST_ERROR_OK)
+        return status;
 
 #endif // PRING_DEBUG
 
@@ -65,12 +71,11 @@ int ResizeElements (list_t *list)
 {
     assert (list);
 
-    if (list->len + 1 == list->capacity)
+    if (list->len == list->capacity)
     {
         list->capacity *= 2;
         listElement_t *newElemenets = (listElement_t *) realloc (list->elements, 
-                                                                 list->capacity * sizeof(listElement_t));
-        list->elements[list->capacity - 1].next = kListStart;
+                                                                 (list->capacity + 1) * sizeof(listElement_t));
         if (newElemenets == NULL)
         {
             perror ("Error trying to realloc elements of the list");
@@ -80,18 +85,19 @@ int ResizeElements (list_t *list)
         }
 
         list->elements = newElemenets;
+        list->free = list->len + 1;
         
-        list->free = list->len;
-        for (size_t i = list->len; i < list->capacity; i++)
+        for (size_t i = list->len + 1; i < list->capacity + 1; i++)
         {
-#ifdef PRINT_DEBUG
             list->elements[i].data = kListPoison;
             list->elements[i].prev = kListPrevFree;
-#endif // PRINT_DEBUG
-            list->elements[i].next = list->len + 1;
+            list->elements[i].next = (ssize_t) i + 1;
         }
+        list->elements[list->capacity].next = kListStart;
         
-        DEBUG_LOG ("list->elements reallocated to %lu capacity", list->capacity);
+        DEBUG_LOG ("list->elements reallocated to %lu capacity", list->capacity + 1);
+
+        LIST_DUMP (*list, "After realloc");
     }
 
     return LIST_ERROR_OK;
@@ -106,11 +112,12 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
     snprintf (comment, kMaxCommentLen, "before Insert() [%lu], val = %g", idx, val); // TODO function
     LIST_DUMP (*list, comment);
 
-    DO_AND_CHECK (LIST_VERIFY (list));
+    LIST_DO_AND_CHECK (LIST_VERIFY (list));
 
-    if (list->len == list->capacity)
-    {
-    }
+    int status = ResizeElements (list);
+    if (status != LIST_ERROR_OK)
+        return status;
+
     list->len++;
 
     if (list->elements[idx].prev == kListPrevFree)
@@ -119,7 +126,13 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
 
         return LIST_ERROR_INSERT_AFTER_EMPTY;
     }
-    //check idxes
+
+    if (idx > list->capacity)
+    {
+        ERROR_LOG ("Index [%lu] is grater than capacity = %lu", idx, list->capacity);
+
+        return LIST_ERROR_WRONG_INDEX;        
+    }
 
 
     *insertedIdx = list->free;
@@ -138,6 +151,26 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
     return LIST_VERIFY (list);
 }
 
+int ListInsertBefore (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
+{
+    assert (list);
+
+    if (list->elements[idx].prev == kListPrevFree)
+    {
+        ERROR_LOG ("%s", "Can't insert before empty element :(");
+
+        return LIST_ERROR_INSERT_AFTER_EMPTY;
+    }
+    if (idx > list->capacity)
+    {
+        ERROR_LOG ("Index [%lu] is grater than capacity = %lu", idx, list->capacity);
+
+        return LIST_ERROR_WRONG_INDEX;        
+    }
+
+    return ListInsert (list, (size_t)list->elements[idx].prev, val, insertedIdx);
+}
+
 int ListDelete (list_t *list, size_t idx)
 {
     assert (list);
@@ -146,7 +179,7 @@ int ListDelete (list_t *list, size_t idx)
     snprintf (comment, kMaxCommentLen, "before Delete() [%lu]", idx);
     LIST_DUMP (*list, comment);
 
-    DO_AND_CHECK (LIST_VERIFY (list));
+    LIST_DO_AND_CHECK (LIST_VERIFY (list));
 
     ssize_t prevIdx = list->elements[idx].prev;
     ssize_t nextIdx = list->elements[idx].next;
@@ -157,14 +190,19 @@ int ListDelete (list_t *list, size_t idx)
 
         return LIST_ERROR_DELETE_IN_EMPTY_LIST;
     }
-    list->len--;
-
     if (list->elements[idx].prev == kListPrevFree)
     {
         ERROR_LOG ("%s", "Trying to delete free element... Are you okay?");
 
         return LIST_ERROR_DELETE_EMPTY_ELEMENT;
     }
+    if (idx > list->capacity)
+    {
+        ERROR_LOG ("Index [%lu] is grater than capacity = %lu", idx, list->capacity);
+
+        return LIST_ERROR_WRONG_INDEX;        
+    }
+    list->len--;
 
     list->elements[nextIdx].prev = prevIdx;
     list->elements[prevIdx].next = nextIdx;
@@ -178,6 +216,21 @@ int ListDelete (list_t *list, size_t idx)
     LIST_DUMP (*list, "after Delte()");
 
     return LIST_VERIFY (list);
+}
+
+
+int ListDeleteBefore (list_t *list, size_t idx)
+{
+    assert (list);
+
+    if (idx > list->capacity)
+    {
+        ERROR_LOG ("Index [%lu] is grater than capacity = %lu", idx, list->capacity);
+
+        return LIST_ERROR_WRONG_INDEX; 
+    }
+
+    return ListDelete (list, (size_t)list->elements[idx].prev);
 }
 
 int ListDump (list_t *list, const char *comment,
@@ -203,15 +256,15 @@ int ListDump (list_t *list, const char *comment,
     fprintf (list->log.logFile, "list->free = %lu\n", list->free);
 
     fprintf (list->log.logFile, "%s", "list->data: ");
-    for (size_t i = 0; i < list->capacity; i++)
+    for (size_t i = 0; i < list->capacity + 1; i++)
         fprintf (list->log.logFile, "%4g, ", list->elements[i].data);
 
     fprintf (list->log.logFile, "%s", "\nlist->next: ");
-    for (size_t i = 0; i < list->capacity; i++)
+    for (size_t i = 0; i < list->capacity + 1; i++)
         fprintf (list->log.logFile, "%4zd, ", list->elements[i].next);
 
     fprintf (list->log.logFile, "%s", "\nlist->prev: ");
-    for (size_t i = 0; i < list->capacity; i++)
+    for (size_t i = 0; i < list->capacity + 1; i++)
         fprintf (list->log.logFile, "%4zd, ", list->elements[i].prev);
 
     fprintf (list->log.logFile, "%s", "\n");
@@ -223,35 +276,31 @@ int ListDump (list_t *list, const char *comment,
     return LIST_ERROR_OK;
 }
 
-#define CREATE_FILE_OR_RETURN(file, name)                       \
-        do {                                                    \
-            file  = fopen (name, "w+");                         \
-            if (file == NULL)                                   \
-            {                                                   \
-                ERROR_LOG ("Error opening file \"%s\"", name);  \
-                return LIST_ERROR_COMMON |                      \
-                    COMMON_ERROR_OPENING_FILE;                  \
-            }                                                   \
-        } while(0)
-
 int ListDumpImg (list_t *list)
 {
-    DO_AND_CHECK (DumpMakeConfig(list));
-    DO_AND_CHECK (DumpMakeImg(list));
+    LIST_DO_AND_CHECK (DumpMakeConfig(list));
+    LIST_DO_AND_CHECK (DumpMakeImg(list));
 
     return LIST_ERROR_OK;
 }
 
 int DumpMakeConfig (list_t *list)
 {
-    CREATE_FILE_OR_RETURN (list->log.graphFile, list->log.graphFilePath);
-#undef CREATE_DIR_OR_RETURN
+    list->log.graphFile  = fopen (list->log.graphFilePath, "w");
+    if (list->log.graphFile == NULL)
+    {
+        ERROR_LOG ("Error opening file \"%s\"", list->log.graphFilePath);
+        return LIST_ERROR_COMMON |
+            COMMON_ERROR_OPENING_FILE;
+    }
 
-    fprintf (list->log.graphFile, "%s", "digraph G {\n"
-                                        "\trankdir=LR;\n");
+    fprintf (list->log.graphFile,   "digraph G {\n"
+                                    "\trankdir=LR;\n");
+                                    // "\tHEAD [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\";]",
+                                    // kYellow);
 
     // Style for each node
-    for (size_t i = 0; i < list->capacity; i++)
+    for (size_t i = 0; i < list->capacity + 1; i++)
     {
         const char *color = kBlue;
         if (i == (size_t) kListStart)
@@ -265,15 +314,15 @@ int DumpMakeConfig (list_t *list)
         
         fprintf (list->log.graphFile,
                  "\telement%lu [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\"; "
-                 "label = \"data = [%g] | next = [%zd] | prev = [%zd]\"];\n",
+                 "label = \"idx = [%lu] | data = [%g] | next = [%zd] | prev = [%zd]\"];\n",
                  i, color,
-                 list->elements[i].data, list->elements[i].next, list->elements[i].prev);
+                 i, list->elements[i].data, list->elements[i].next, list->elements[i].prev);
     }
 
     // to make them in one line
     fprintf (list->log.graphFile, "%s", "\tedge [color=invis];\n"
                                         "\t");
-    for (size_t i = 0; i < list->capacity - 1; i++)
+    for (size_t i = 0; i < list->capacity + 1 ; i++)
     {
         fprintf (list->log.graphFile, "element%lu->", i);
     }
@@ -294,29 +343,34 @@ int DumpMakeConfig (list_t *list)
             fprintf (list->log.graphFile, "element%lu->", i);
     }
 
-    fprintf (list->log.graphFile, "%s", "\t");
-    size_t i = kListStart; // TODO: do not use i in second for loop
-    for (; ; i = (size_t) list->elements[i].next)
+    fprintf (list->log.graphFile, "\telement%lu->", kListStart);
+    for (size_t i = ListGetHead (list); ; i = (size_t) list->elements[i].next)
     {
-        if (list->elements[i].next == kListStart)
+        if (i == kListStart)
         {
             fprintf (list->log.graphFile, "element%lu[color=red; constraint=false];\n", i);
+            
             break;
         }
         else
             fprintf (list->log.graphFile, "element%lu->", i);
     }
 
-    for (size_t j = i; ; j = (size_t) list->elements[j].prev)
+    fprintf (list->log.graphFile, "\telement%lu->", kListStart);
+    for (size_t i = ListGetTail (list); ; i = (size_t) list->elements[i].prev)
     {
-        if (j == kListStart)
+        DEBUG_LOG ("\t list->elements[i].prev = %zd;", list->elements[i].prev);
+
+        if (i == kListStart)
         {
-            fprintf (list->log.graphFile, "element%lu[color=blue; constraint=false];\n", j);
+            fprintf (list->log.graphFile, "element%lu[color=blue; constraint=false];\n", i);
             break;
         }
         else
-            fprintf (list->log.graphFile, "element%lu->", j);
+            fprintf (list->log.graphFile, "element%lu->", i);
     }
+
+    // fprintf (list->log.graphFile, "\tHEAD->element%lu[color=yellow; constraint=false];\n", ListGetHead (list));
 
     fprintf (list->log.graphFile, "%s", "}");
     fclose (list->log.graphFile);
@@ -329,8 +383,8 @@ int DumpMakeImg (list_t *list)
     static size_t imageCounter = 0;
     imageCounter++;
 
-    char imgFileName[kImgNameLen] = {};
-    snprintf (imgFileName, kImgNameLen, "%lu.svg", imageCounter);
+    char imgFileName[kFileNameLen] = {};
+    snprintf (imgFileName, kFileNameLen, "%lu.svg", imageCounter);
 
     const size_t kMaxCommandLen = 256;
     char command[kMaxCommandLen] = {};
@@ -358,6 +412,20 @@ int DumpMakeImg (list_t *list)
     return LIST_ERROR_OK;
 }
 
+size_t ListGetHead (list_t *list)
+{
+    assert (list);
+
+    return (size_t) list->elements[kListStart].next;
+}
+
+size_t ListGetTail (list_t *list)
+{
+    assert (list);
+
+    return (size_t) list->elements[kListStart].prev;
+}
+
 void ListDtor (list_t *list)
 {
     assert (list);
@@ -372,21 +440,20 @@ void ListDtor (list_t *list)
 #endif // PRINT_DEBUG
 }
 
-// FIXME: ABSOLUTE SHIT
 int ListVerify (list_t *list)
 {
     assert (list);
     
     int error = LIST_ERROR_OK;
 
-    // TODO: listGetHead
-    // TODO: listGetTail
-    ssize_t nextAfterHead = list->elements[list->elements[kListStart].next].next;
-    ssize_t idx = nextAfterHead;
+    // ssize_t nextAfterHead = list->elements[ListGetHead (list)].next;
+    // ssize_t idx = nextAfterHead;
 
     DEBUG_LOG ("%s", "Check next edges:");
 
-    for (idx = nextAfterHead; list->elements[idx].next != kListStart; idx = list->elements[idx].next)
+    for (ssize_t idx = (ssize_t) ListGetHead (list); 
+         list->elements[idx].next != kListStart; 
+         idx = list->elements[idx].next)
     {
         DEBUG_VAR ("%zd", idx);
 
@@ -404,7 +471,9 @@ int ListVerify (list_t *list)
 
     DEBUG_LOG ("%s", "Check prev edges:");
 
-    for (; list->elements[idx].prev != kListStart; idx = list->elements[idx].prev)
+    for (ssize_t idx = (ssize_t) ListGetTail (list); 
+         list->elements[idx].prev != kListStart; 
+         idx = list->elements[idx].prev)
     {
         DEBUG_VAR ("%zd", idx);
         ssize_t nextIdx = list->elements[idx].next;
@@ -432,6 +501,8 @@ int ListVerify (list_t *list)
 
     }
 
+    // TODO: check for loop
+    // if iterator > capacity - than we have loop
     // TODO: check free elements for poison
 
     return error;

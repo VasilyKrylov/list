@@ -21,13 +21,6 @@
 #define ERROR_LOG(format, ...)   fprintf (stderr, RED_BOLD_COLOR "[ERROR] %s:%d:%s(): " format "\n" COLOR_END, __FILE__, __LINE__, __func__, __VA_ARGS__)
 #define ERROR_PRINT(format, ...) fprintf (stderr, RED_BOLD_COLOR format "\n" COLOR_END, __VA_ARGS__)
 
-#define DO_AND_CHECK(action)                \
-        do                                  \
-        {                                   \
-            int status = action;            \
-            if (status != LIST_ERROR_OK)    \
-                return status;              \
-        } while (0)                       
 enum commonErrors
 {
     COMMON_ERROR_OK                     = 0,

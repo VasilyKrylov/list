@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "debug.h"
+#include "list_log.h"
 
 typedef double listDataType;
 
@@ -18,7 +19,16 @@ const size_t kListMaxLen         = (1UL << 32);
 
 const size_t kMaxCommentLen         = 64;
 
+#define LIST_DO_AND_CHECK(action)           \
+        do                                  \
+        {                                   \
+            int status = action;            \
+            if (status != LIST_ERROR_OK)    \
+                return status;              \
+        } while (0)                       
+
 #ifdef PRINT_DEBUG
+
 struct varInfo_t
 {
     const char *name = NULL;
@@ -26,16 +36,7 @@ struct varInfo_t
     int line         = 0;
     const char *func = NULL;
 };
-struct listLog_t
-{
-    char logFolderPath[kLogFolderPathLen] = {};
-    char imgFolderPath[kImgFolderPathLen] = {};
-    char logFilePath[kLogFilePathLen]  = {};
-    char graphFilePath[kGraphFilePathLen] = {};
 
-    FILE *logFile  = NULL;
-    FILE *graphFile = NULL;
-};
 
 #define LIST_CTOR(listName, size) ListCtor (&listName, size,                        \
                                             varInfo_t{.name = #listName,            \
@@ -60,7 +61,6 @@ struct listElement_t
     ssize_t next = 0; // to be the same type as prev
     ssize_t prev = 0; // -1 for free elements
 };
-
 struct list_t
 {
     listElement_t *elements = NULL;
@@ -89,17 +89,20 @@ enum listError_t
     LIST_ERROR_POISON_IN_DATA           = 1 << 7,
     LIST_ERROR_DELETE_IN_EMPTY_LIST     = 1 << 8,
     LIST_ERROR_DELETE_EMPTY_ELEMENT     = 1 << 9,
+    LIST_ERROR_WRONG_INDEX              = 1 << 10,
 
     LIST_ERROR_COMMON                   = 1 << 31
 };
 
-int ListCtor    (list_t *list, size_t capacity
-                 ON_DEBUG (,varInfo_t varInfo));
-int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx);
-int ListDelete  (list_t *list, size_t idx);
-int ListDump    (list_t *list, const char *comment,
-                 const char *_FILE, int _LINE, const char * _FUNC);
-int ListVerify  (list_t *list);
-void ListDtor   (list_t *list);
+int ListCtor            (list_t *list, size_t capacity
+                         ON_DEBUG (,varInfo_t varInfo));
+int ListInsert          (list_t *list, size_t idx, listDataType val, size_t *insertedIdx);
+int ListInsertBefore    (list_t *list, size_t idx, listDataType val, size_t *insertedIdx);
+int ListDelete          (list_t *list, size_t idx);
+int ListDeleteBefore    (list_t *list, size_t idx);
+int ListDump            (list_t *list, const char *comment,
+                         const char *_FILE, int _LINE, const char * _FUNC);
+int ListVerify          (list_t *list);
+void ListDtor           (list_t *list);
 
 #endif //K_LIST_H
