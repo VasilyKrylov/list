@@ -139,11 +139,12 @@ int DumpMakeConfig (list_t *list)
                COMMON_ERROR_OPENING_FILE;
     }
 
-    fprintf (graphFile          ,   "digraph G {\n"
-                                    "\trankdir=LR;\n"
-                                    "\tsplines=ortho;\n");
-                                    // "\tHEAD [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\";]",
-                                    // kYellow);
+    fprintf (graphFile  ,   "digraph G {\n"
+                            "\trankdir=LR;\n"
+                            "\tsplines=ortho;\n"
+                            "\tnode [shape=octagon; style=\"filled\"; fillcolor=red];\n");
+                            // "\tHEAD [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\";]",
+                            // kYellow);
 
     // Style for each node
     for (size_t i = 0; i < list->capacity + 1; i++)
@@ -166,54 +167,56 @@ int DumpMakeConfig (list_t *list)
     }
 
     // to make them in one line
-    fprintf (graphFile, "%s", "\tedge [color=invis];\n"
-                                        "\t");
-    for (size_t i = 0; i < list->capacity + 1 ; i++)
+    fprintf (graphFile, "%s", "\tedge [color=invis];\n");
+    for (size_t i = 1; i < list->capacity + 1 ; i++)
     {
-        fprintf (graphFile, "element%lu->", i);
+        fprintf (graphFile, "\telement%lu->element%lu;\n", i - 1, i);
     }
-    fprintf (graphFile          , "element%lu;\n"
-                                  "\tedge [style=\"\"];\n"
-                                  "\t", 
-                                  list->capacity - 1);
+    fprintf (graphFile, "%s", "\tedge [style=\"\"];\n");
     
-    // connect free elements
-    for (size_t i = list->free; ; i = (size_t) list->elements[i].next)
+    for (size_t i = 0; i < list->capacity; i++)
     {
-        if (list->elements[i].next == kListStart || i == kListStart)
+        if (list->elements[i].prev == kListPrevFree)
         {
-            fprintf (graphFile, "element%lu[color=green; constraint=false];\n", i);
-            break;
+            if (IsValidIdx (list, (size_t)list->elements[i].next))
+                fprintf (graphFile, "\telement%lu->element%zd[color=green; constraint=false];\n", 
+                         i, list->elements[i].next);
+            else
+                fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
+                         i, list->elements[i].next);
         }
         else
-            fprintf (graphFile, "element%lu->", i);
-    }
-
-    fprintf (graphFile, "\telement%lu->", kListStart);
-    for (size_t i = ListGetHead (list); ; i = (size_t) list->elements[i].next)
-    {
-        if (i == kListStart)
         {
-            fprintf (graphFile, "element%lu[color=blue; constraint=false];\n", i);
+            ssize_t nextIdx = list->elements[i].next;
+            ssize_t prevIdx = list->elements[i].prev;
+
+            if (IsValidIdx (list, (size_t)nextIdx) && 
+                IsBidirectional (list, i, (size_t)nextIdx)) 
+            {
+                fprintf (graphFile, "\telement%lu->element%zd[dir=both, color=blue; constraint=false];\n", 
+                        i, list->elements[i].next);   
+            }
+            else if (!IsValidIdx (list, (size_t)nextIdx) ||
+                     !IsBidirectional (list, i, (size_t)nextIdx))
+            {
+                fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red;  constraint=false];\n", 
+                        i, list->elements[i].next);
+
+            }
             
-            break;
+            // if (IsValidIdx (list, (size_t)prevIdx) && 
+            //     IsBidirectional (list, (size_t)prevIdx, i)) 
+            // {
+            //     fprintf (graphFile, "\telement%lu->element%zd[dir=both, color=blue; constraint=false];\n", 
+            //             i, list->elements[i].prev);   
+            // }
+            if (!IsValidIdx (list, (size_t)prevIdx) ||
+                !IsBidirectional (list, (size_t)prevIdx, i))
+            {
+                fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red;  constraint=false];\n", 
+                        i, list->elements[i].prev);
+            }
         }
-        else
-            fprintf (graphFile, "element%lu->", i);
-    }
-
-    fprintf (graphFile, "\telement%lu->", kListStart);
-    for (size_t i = ListGetTail (list); ; i = (size_t) list->elements[i].prev)
-    {
-        DEBUG_LOG ("\t list->elements[i].prev = %zd;", list->elements[i].prev);
-
-        if (i == kListStart)
-        {
-            fprintf (graphFile, "element%lu[color=red; constraint=false];\n", i);
-            break;
-        }
-        else
-            fprintf (graphFile, "element%lu->", i);
     }
 
     // fprintf (graphFile          , "\tHEAD->element%lu[color=yellow; constraint=false];\n", ListGetHead (list));

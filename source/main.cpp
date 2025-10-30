@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 
 #include "list.h"
+#include "list_log.h"
 #include "debug.h"
 
 int TestRandom1 (list_t *list);
@@ -93,19 +94,24 @@ int TestBadEdge (list_t *list)
         LIST_DO_AND_CHECK ( ListInsert (list, i, (listDataType)(100 * i + i), &idx));
     }
 
-    // list->elements[3].prev = 666;
     LIST_DO_AND_CHECK (ListDelete (list, 5));
+
+    list->elements[3].prev = 666;
+    list->elements[6].next = 228;
+    list->elements[5].next = 272;
+    LIST_DUMP (*list, "AFTER BAD EDIT");
+
     
     return LIST_ERROR_OK;
 }
 
-// TODO: pointers in dump
 // TODO:
-// default node is scary
-// TODO:
-// в DUMP проходимся только по массиву, а не по next/prev
-// В верификаторе ходим по связям, но только size раз
-// если меньше size раз, то значит не хватает элементов
+// [*] default node is scary
+// [*] в DUMP проходимся только по массиву, а не по next/prev
+// [ ] В верификаторе ходим по связям, но только size раз
+// [ ] если меньше size раз, то значит не хватает элементов
+// [ ] bidirectional nodes
+// [ ] непарные стрелки жирные
 int main()
 {
     list_t list;
@@ -115,6 +121,7 @@ int main()
     if (status != LIST_ERROR_OK)
     {
         ListDtor (&list);
+
         return status;
     }
 

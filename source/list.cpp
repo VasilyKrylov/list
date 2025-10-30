@@ -96,7 +96,7 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
     assert (insertedIdx);
 
     char comment[kMaxCommentLen] = {};
-    snprintf (comment, kMaxCommentLen, "before Insert() [%lu], val = %g", idx, val); // TODO function
+    snprintf (comment, kMaxCommentLen, "before Insert() [%lu], val = %g", idx, val); // TODO: function
     LIST_DUMP (*list, comment);
 
     LIST_DO_AND_CHECK (LIST_VERIFY (list));
@@ -168,6 +168,7 @@ int ListDelete (list_t *list, size_t idx)
     LIST_DUMP (*list, comment);
 
     LIST_DO_AND_CHECK (LIST_VERIFY (list));
+    DEBUG_LOG ("%s", "first verify passed");
 
     ssize_t prevIdx = list->elements[idx].prev;
     ssize_t nextIdx = list->elements[idx].next;
@@ -238,6 +239,20 @@ size_t ListGetTail (list_t *list)
     return (size_t) list->elements[kListStart].prev;
 }
 
+bool IsValidIdx (list_t *list, size_t idx)
+{
+    assert (list);
+
+    return idx < list->capacity + 1;
+}
+
+bool IsBidirectional (list_t *list, size_t node1, size_t node2)
+{
+    assert (list);
+
+    return list->elements[node1].next == (ssize_t) node2 && list->elements[node2].prev == (ssize_t) node1;
+}
+
 void ListDtor (list_t *list)
 {
     assert (list);
@@ -257,6 +272,25 @@ int ListVerify (list_t *list)
     assert (list);
     
     int error = LIST_ERROR_OK;
+
+    DEBUG_LOG ("%s", "Check valid indexes:");
+    for (size_t i = 0; i < list->capacity + 1; i++)
+    {
+        if (list->elements[i].next > (ssize_t) list->capacity)
+        {
+            ERROR_LOG ("[%lu]->next = %zd; - index grater than capacity=%lu",
+                        i, list->elements[i].next, list->capacity);
+
+            return LIST_ERROR_BROKEN_IDX;
+        }
+        if (list->elements[i].prev > (ssize_t) list->capacity)
+        {
+            ERROR_LOG ("[%lu]->prev = %zd; - index grater than capacity=%lu",
+                        i, list->elements[i].prev, list->capacity);
+
+            return LIST_ERROR_BROKEN_IDX;
+        }
+    }
 
     DEBUG_LOG ("%s", "Check loop in free list:");
     size_t cnt = 0;

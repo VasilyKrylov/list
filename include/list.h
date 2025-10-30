@@ -26,6 +26,7 @@ const size_t kFileNameLen            = 64;
         do                                  \
         {                                   \
             int status = action;            \
+            DEBUG_VAR("%d", status);        \
             if (status != LIST_ERROR_OK)    \
                 return status;              \
         } while (0)                       
@@ -61,7 +62,7 @@ struct listLog_t
 
 #define LIST_CTOR(listName, size) ListCtor (&listName, size);
 #define LIST_VERIFY(list) LIST_ERROR_OK;
-#define LIST_DUMP(list, comment)
+#define LIST_DUMP(list, comment) 
 
 #endif // PRING_DEBUG
 
@@ -102,6 +103,7 @@ enum listError_t
     LIST_ERROR_DELETE_EMPTY_ELEMENT     = 1 << 9,
     LIST_ERROR_WRONG_INDEX              = 1 << 10,
     LIST_ERROR_LOOPED                   = 1 << 11,
+    LIST_ERROR_BROKEN_IDX               = 1 << 12,
 
     LIST_ERROR_COMMON                   = 1 << 31
 };
@@ -114,6 +116,8 @@ int ListDelete          (list_t *list, size_t idx);
 int ListDeleteBefore    (list_t *list, size_t idx);
 size_t ListGetHead      (list_t *list);
 size_t ListGetTail      (list_t *list);
+bool IsValidIdx         (list_t *list, size_t idx);
+bool IsBidirectional    (list_t *list, size_t node1, size_t node2);
 int ListVerify          (list_t *list);
 void ListDtor           (list_t *list);
 
