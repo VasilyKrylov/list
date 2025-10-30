@@ -15,11 +15,12 @@ const size_t kListMaxLen         = (1UL << 32);
 const size_t kMaxCommentLen         = 64;
 const char kParentDumpFolderName[] = "dump/";
 const char kImgFolderName[]        = "img/";
+const char kDotFolderName[]        = "dot/";
 const char kLogFileName[]          = "log.html";
 const char kGraphFileName[]        = "dot.txt";
 
-const size_t kLogFolderPathLen = 32;
-const size_t kFileNameLen      = 64;
+const size_t kLogFolderPathLen       = 44;
+const size_t kFileNameLen            = 64;
 
 #define LIST_DO_AND_CHECK(action)           \
         do                                  \
@@ -42,11 +43,12 @@ struct listLog_t
 {
     char logFolderPath [kLogFolderPathLen] = {}; // dump/[date-time]
     char imgFolderPath [kFileNameLen]      = {}; // dump/[date-time]/img
+    char dotFolderPath [kFileNameLen]      = {}; // dump/[date-time]/dot
     char logFilePath   [kFileNameLen]      = {}; // dump/[date-time]/log.html
-    char graphFilePath [kFileNameLen]      = {}; // dump/[date-time]/dot.txt
+    // char graphFilePath [kFileNameLen]      = {}; // dump/[date-time]/dot.txt
 
     FILE *logFile  = NULL;
-    FILE *graphFile = NULL; // TODO: make more than one dot.txt file
+    // FILE *graphFile = NULL; // TODO: make more than one dot.txt file
     // dot1.txt dot2.txt ...
 };
 
@@ -113,10 +115,6 @@ int ListInsert          (list_t *list, size_t idx, listDataType val, size_t *ins
 int ListInsertBefore    (list_t *list, size_t idx, listDataType val, size_t *insertedIdx);
 int ListDelete          (list_t *list, size_t idx);
 int ListDeleteBefore    (list_t *list, size_t idx);
-#ifdef PRINT_DEBUG
-int ListDump            (list_t *list, const char *comment,
-                         const char *_FILE, int _LINE, const char * _FUNC);
-#endif // PRINT_DEBUG
 size_t ListGetHead      (list_t *list);
 size_t ListGetTail      (list_t *list);
 int ListVerify          (list_t *list);

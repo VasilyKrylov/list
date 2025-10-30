@@ -9,6 +9,8 @@
 #include "list_log.h"
 
 #ifdef PRINT_DEBUG
+static size_t imageCounter = 0;
+
 const char * const kGray        = "666666"; // TODO:
 const char * const kBlue        = "6666ff";
 const char * const kDarkBlue    = "3333ff";
@@ -33,11 +35,11 @@ int LogInit (listLog_t *log)
     snprintf (log->logFilePath,   kFileNameLen, "%s%s",
               log->logFolderPath, kLogFileName);
 
-    snprintf (log->graphFilePath, kFileNameLen, "%s%s",
-              log->logFolderPath, kGraphFileName);
-
     snprintf (log->imgFolderPath, kFileNameLen, "%s%s",
               log->logFolderPath, kImgFolderName);
+
+    snprintf (log->dotFolderPath, kFileNameLen, "%s%s",
+              log->logFolderPath, kDotFolderName);
 
 
     if (SafeMkdir (kParentDumpFolderName) != LIST_ERROR_OK)
@@ -52,6 +54,10 @@ int LogInit (listLog_t *log)
         return LIST_ERROR_COMMON | 
             COMMON_ERROR_CREATING_FILE;
 
+    if (SafeMkdir (log->dotFolderPath) != LIST_ERROR_OK)
+        return LIST_ERROR_COMMON | 
+            COMMON_ERROR_CREATING_FILE;
+
     log->logFile = fopen (log->logFilePath, "w");
     if (log->logFile == NULL)
     {
@@ -61,25 +67,10 @@ int LogInit (listLog_t *log)
                COMMON_ERROR_OPENING_FILE;
     }
 
-    log->graphFile = fopen (log->graphFilePath, "w");
-    if (log->graphFile == NULL)
-    {
-        ERROR_LOG ("Error opening file \"%s\"", log->graphFilePath);
-        
-        return LIST_ERROR_COMMON |
-               COMMON_ERROR_OPENING_FILE;
-    }
-
     fprintf (log->logFile, "%s", "<pre>\n");
 
     return LIST_ERROR_OK;
 }
-
-
-
-
-
-
 
 int ListDump (list_t *list, const char *comment,
               const char *FILE_, int LINE_, const char *FUNC_)
@@ -117,7 +108,7 @@ int ListDump (list_t *list, const char *comment,
 
     fprintf (list->log.logFile, "%s", "\n");
 
-    ListDumpImg (list);
+    LIST_DO_AND_CHECK (ListDumpImg (list));
 
     fprintf (list->log.logFile, "%s", "<hr>\n\n");
     
@@ -126,6 +117,8 @@ int ListDump (list_t *list, const char *comment,
 
 int ListDumpImg (list_t *list)
 {
+    imageCounter++;
+
     LIST_DO_AND_CHECK (DumpMakeConfig(list));
     LIST_DO_AND_CHECK (DumpMakeImg(list));
 
@@ -134,15 +127,19 @@ int ListDumpImg (list_t *list)
 
 int DumpMakeConfig (list_t *list)
 {
-    list->log.graphFile  = fopen (list->log.graphFilePath, "w");
-    if (list->log.graphFile == NULL)
+    char graphFilePath[kFileNameLen + 22] = {};
+    snprintf (graphFilePath, kFileNameLen + 22, "%s%lu.dot", list->log.dotFolderPath, imageCounter);
+
+    FILE *graphFile  = fopen (graphFilePath, "w");
+    if (graphFile == NULL)
     {
-        ERROR_LOG ("Error opening file \"%s\"", list->log.graphFilePath);
+        ERROR_LOG ("Error opening file \"%s\"", graphFilePath);
+
         return LIST_ERROR_COMMON |
-            COMMON_ERROR_OPENING_FILE;
+               COMMON_ERROR_OPENING_FILE;
     }
 
-    fprintf (list->log.graphFile,   "digraph G {\n"
+    fprintf (graphFile          ,   "digraph G {\n"
                                     "\trankdir=LR;\n"
                                     "\tsplines=ortho;\n");
                                     // "\tHEAD [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\";]",
@@ -161,7 +158,7 @@ int DumpMakeConfig (list_t *list)
         else if (list->elements[i].prev == kListPrevFree)
             color = kGreen; 
         
-        fprintf (list->log.graphFile,
+        fprintf (graphFile          ,
                  "\telement%lu [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\"; "
                  "label = \"idx = [%lu] | data = [%g] | next = [%zd] | prev = [%zd]\"];\n",
                  i, color,
@@ -169,13 +166,13 @@ int DumpMakeConfig (list_t *list)
     }
 
     // to make them in one line
-    fprintf (list->log.graphFile, "%s", "\tedge [color=invis];\n"
+    fprintf (graphFile, "%s", "\tedge [color=invis];\n"
                                         "\t");
     for (size_t i = 0; i < list->capacity + 1 ; i++)
     {
-        fprintf (list->log.graphFile, "element%lu->", i);
+        fprintf (graphFile, "element%lu->", i);
     }
-    fprintf (list->log.graphFile, "element%lu;\n"
+    fprintf (graphFile          , "element%lu;\n"
                                   "\tedge [style=\"\"];\n"
                                   "\t", 
                                   list->capacity - 1);
@@ -185,61 +182,58 @@ int DumpMakeConfig (list_t *list)
     {
         if (list->elements[i].next == kListStart || i == kListStart)
         {
-            fprintf (list->log.graphFile, "element%lu[color=green; constraint=false];\n", i);
+            fprintf (graphFile, "element%lu[color=green; constraint=false];\n", i);
             break;
         }
         else
-            fprintf (list->log.graphFile, "element%lu->", i);
+            fprintf (graphFile, "element%lu->", i);
     }
 
-    fprintf (list->log.graphFile, "\telement%lu->", kListStart);
+    fprintf (graphFile, "\telement%lu->", kListStart);
     for (size_t i = ListGetHead (list); ; i = (size_t) list->elements[i].next)
     {
         if (i == kListStart)
         {
-            fprintf (list->log.graphFile, "element%lu[color=red; constraint=false];\n", i);
+            fprintf (graphFile, "element%lu[color=blue; constraint=false];\n", i);
             
             break;
         }
         else
-            fprintf (list->log.graphFile, "element%lu->", i);
+            fprintf (graphFile, "element%lu->", i);
     }
 
-    fprintf (list->log.graphFile, "\telement%lu->", kListStart);
+    fprintf (graphFile, "\telement%lu->", kListStart);
     for (size_t i = ListGetTail (list); ; i = (size_t) list->elements[i].prev)
     {
         DEBUG_LOG ("\t list->elements[i].prev = %zd;", list->elements[i].prev);
 
         if (i == kListStart)
         {
-            fprintf (list->log.graphFile, "element%lu[color=blue; constraint=false];\n", i);
+            fprintf (graphFile, "element%lu[color=red; constraint=false];\n", i);
             break;
         }
         else
-            fprintf (list->log.graphFile, "element%lu->", i);
+            fprintf (graphFile, "element%lu->", i);
     }
 
-    // fprintf (list->log.graphFile, "\tHEAD->element%lu[color=yellow; constraint=false];\n", ListGetHead (list));
+    // fprintf (graphFile          , "\tHEAD->element%lu[color=yellow; constraint=false];\n", ListGetHead (list));
 
-    fprintf (list->log.graphFile, "%s", "}");
-    fclose (list->log.graphFile);
+    fprintf (graphFile, "%s", "}");
+    fclose (graphFile);
     
     return LIST_ERROR_OK;
 }
 
 int DumpMakeImg (list_t *list)
 {
-    static size_t imageCounter = 0;
-    imageCounter++;
-
     char imgFileName[kFileNameLen] = {};
     snprintf (imgFileName, kFileNameLen, "%lu.svg", imageCounter);
 
     const size_t kMaxCommandLen = 256;
     char command[kMaxCommandLen] = {};
 
-    snprintf (command, kMaxCommandLen, "dot %s%s -T svg -o %s%s", 
-              list->log.logFolderPath, kGraphFileName,
+    snprintf (command, kMaxCommandLen, "dot %s%lu.dot -T svg -o %s%s", 
+              list->log.dotFolderPath, imageCounter,
               list->log.imgFolderPath, imgFileName);
 
     int status = system (command);

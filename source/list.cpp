@@ -5,18 +5,13 @@
 #include <assert.h>
 
 #include "debug.h"
-
-#include "list.h"
 #include "list_log.h"
 #include "file_utils.h"
 #include "float_math.h"
 
+#include "list.h"
 
-
-#ifdef PRINT_DEBUG
-#endif // PRINT_DEBUG
 int ResizeElements  (list_t *list);
-
 
 int ListCtor (list_t *list, size_t capacity
               ON_DEBUG (, varInfo_t varInfo))
