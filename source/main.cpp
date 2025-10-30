@@ -101,6 +101,8 @@ int TestBadEdge (list_t *list)
     list->elements[5].next = 272;
     LIST_DUMP (*list, "AFTER BAD EDIT");
 
+    LIST_DO_AND_CHECK (ListDelete (list, 8));
+
     
     return LIST_ERROR_OK;
 }

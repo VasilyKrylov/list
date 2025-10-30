@@ -14,8 +14,8 @@ static size_t imageCounter = 0;
 const char * const kGray        = "666666"; // TODO:
 const char * const kBlue        = "6666ff";
 const char * const kDarkBlue    = "3333ff";
-const char * const kGreen       = "33cc33";
-const char * const kDarkGreen   = "006600";
+const char * const kGreen       = "99ff66";
+const char * const kDarkGreen   = "33cc33";
 const char * const kYellow      = "ffcc00";
 
 int ListDumpImg     (list_t *list);
@@ -196,24 +196,28 @@ int DumpMakeConfig (list_t *list)
                 fprintf (graphFile, "\telement%lu->element%zd[dir=both, color=blue; constraint=false];\n", 
                         i, list->elements[i].next);   
             }
-            else if (!IsValidIdx (list, (size_t)nextIdx) ||
-                     !IsBidirectional (list, i, (size_t)nextIdx))
+            else
             {
-                fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red;  constraint=false];\n", 
-                        i, list->elements[i].next);
-
+                if (!IsValidIdx (list, (size_t)nextIdx))
+                {
+                    fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
+                            i, list->elements[i].next);
+                }
+                else if (!IsBidirectional (list, i, (size_t)nextIdx))
+                {
+                    fprintf (graphFile, "\telement%lu->element%zd[color=blue; constraint=false];\n", 
+                            i, list->elements[i].next);
+                }
             }
             
-            // if (IsValidIdx (list, (size_t)prevIdx) && 
-            //     IsBidirectional (list, (size_t)prevIdx, i)) 
-            // {
-            //     fprintf (graphFile, "\telement%lu->element%zd[dir=both, color=blue; constraint=false];\n", 
-            //             i, list->elements[i].prev);   
-            // }
-            if (!IsValidIdx (list, (size_t)prevIdx) ||
-                !IsBidirectional (list, (size_t)prevIdx, i))
+            if (!IsValidIdx (list, (size_t)prevIdx))
             {
-                fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red;  constraint=false];\n", 
+                fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
+                        i, list->elements[i].prev);
+            }
+            else if (!IsBidirectional (list, (size_t)prevIdx, i))
+            {
+                fprintf (graphFile, "\telement%lu->element%zd[color=blue; constraint=false];\n", 
                         i, list->elements[i].prev);
             }
         }
