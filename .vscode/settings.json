@@ -12,6 +12,7 @@
         "typeinfo": "cpp",
         "complex": "cpp",
         "vector": "cpp",
-        "list": "cpp"
+        "list": "cpp",
+        "cmath": "cpp"
     },
 }

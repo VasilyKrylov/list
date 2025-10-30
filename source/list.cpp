@@ -7,6 +7,7 @@
 #include "debug.h"
 
 #include "list.h"
+#include "list_log.h"
 #include "file_utils.h"
 #include "float_math.h"
 
@@ -17,12 +18,13 @@ const char * const kGreen       = "33cc33";
 const char * const kDarkGreen   = "006600";
 const char * const kYellow      = "ffcc00";
 
+#ifdef PRINT_DEBUG
 int ListDumpImg     (list_t *list);
 int DumpMakeConfig  (list_t *list);
 int DumpMakeImg     (list_t *list);
+#endif // PRINT_DEBUG
 int ResizeElements  (list_t *list);
 
-// not used now:
 size_t ListGetHead (list_t *list);
 size_t ListGetTail (list_t *list);
 
@@ -106,7 +108,7 @@ int ResizeElements (list_t *list)
 int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
 {
     assert (list);
-    assert(insertedIdx);
+    assert (insertedIdx);
 
     char comment[kMaxCommentLen] = {};
     snprintf (comment, kMaxCommentLen, "before Insert() [%lu], val = %g", idx, val); // TODO function
@@ -154,6 +156,7 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
 int ListInsertBefore (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
 {
     assert (list);
+    assert (insertedIdx);
 
     if (list->elements[idx].prev == kListPrevFree)
     {
@@ -218,7 +221,6 @@ int ListDelete (list_t *list, size_t idx)
     return LIST_VERIFY (list);
 }
 
-
 int ListDeleteBefore (list_t *list, size_t idx)
 {
     assert (list);
@@ -233,6 +235,7 @@ int ListDeleteBefore (list_t *list, size_t idx)
     return ListDelete (list, (size_t)list->elements[idx].prev);
 }
 
+#ifdef PRINT_DEBUG
 int ListDump (list_t *list, const char *comment,
               const char *FILE_, int LINE_, const char *FUNC_)
 {
@@ -411,6 +414,7 @@ int DumpMakeImg (list_t *list)
 
     return LIST_ERROR_OK;
 }
+#endif // PRINT_DEBUG
 
 size_t ListGetHead (list_t *list)
 {
@@ -446,8 +450,36 @@ int ListVerify (list_t *list)
     
     int error = LIST_ERROR_OK;
 
-    // ssize_t nextAfterHead = list->elements[ListGetHead (list)].next;
-    // ssize_t idx = nextAfterHead;
+    DEBUG_LOG ("%s", "Check loop in free list:");
+    size_t cnt = 0;
+    for (size_t idx = list->free; idx != kListStart; idx = (size_t)list->elements[idx].next)
+    {
+        cnt++;
+
+        if (cnt > list->capacity)
+        {
+            ERROR_LOG ("%s", "List of free elements is looped");
+
+            error |= LIST_ERROR_LOOPED;
+        }
+    }
+
+    DEBUG_LOG ("%s", "Check loop in data list:");
+    cnt = 0;
+    for (size_t idx = ListGetHead (list); idx != kListStart; idx = (size_t)list->elements[idx].next)
+    {
+        cnt++;
+
+        if (cnt > list->capacity)
+        {
+            ERROR_LOG ("%s", "List of data elements is looped");
+
+            error |= LIST_ERROR_LOOPED;
+        }
+    }
+
+    if (error != LIST_ERROR_OK)
+        return error;
 
     DEBUG_LOG ("%s", "Check next edges:");
 
@@ -501,9 +533,18 @@ int ListVerify (list_t *list)
 
     }
 
-    // TODO: check for loop
-    // if iterator > capacity - than we have loop
-    // TODO: check free elements for poison
+    DEBUG_LOG ("%s", "Check free elements:");
+    for (size_t idx = list->free; idx != kListStart; idx = (size_t)list->elements[idx].next)
+    {
+        cnt++;
+
+        if (list->elements[idx].prev != kListPrevFree)
+        {
+            ERROR_LOG ("%s", "List of data elements is looped");
+
+            error |= LIST_ERROR_BROKEN_FREE_ELEMENT;
+        }
+    }
 
     return error;
 }

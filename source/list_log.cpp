@@ -6,6 +6,7 @@
 
 #include "list_log.h"
 
+#ifdef PRING_DEBUG
 int LogInit (listLog_t *log)
 {
     time_t t = time (NULL);
@@ -60,3 +61,4 @@ int LogInit (listLog_t *log)
 
     return LIST_ERROR_OK;
 }
+#endif // PRINT_DEBUG

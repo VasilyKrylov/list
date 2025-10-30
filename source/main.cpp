@@ -74,14 +74,22 @@ int TestBeforeFunctions (list_t *list)
     }
 
     ListDeleteBefore (list, 3);
-    
+    ListDeleteBefore (list, 7);
+    ListInsertBefore (list, 3, 333, &idx);
+    ListDeleteBefore (list, 0);
+    ListDeleteBefore (list, 5);
+    ListInsertBefore (list, 5, 555, &idx);
+
+
+
     return LIST_ERROR_OK;
 }
-// TODO: InsertBefore
+
+// TODO: Multiple dot files
 int main()
 {
     list_t list;
-    LIST_CTOR (list, 5);
+    LIST_CTOR (list, 10);
 
     int status = TestBeforeFunctions (&list);
     if (status != LIST_ERROR_OK)
@@ -89,11 +97,6 @@ int main()
         ListDtor (&list);
         return status;
     }
-
-    // Test3 (&list);
-
-    // TestRandom1 (&list);
-    // Test4 (&list);
 
     ListDtor (&list);
 }

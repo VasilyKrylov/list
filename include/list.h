@@ -4,20 +4,22 @@
 #include <stdio.h>
 
 #include "debug.h"
-#include "list_log.h"
-
 typedef double listDataType;
 
 const size_t kListStart          = 0;
-const size_t kHead               = kListStart;
-// maybe this should be one variable, but I don't want to use F2 on kListStart
-// for example it is strange, that list of free elements ends in head
 
 const ssize_t kListPrevFree      = -1;
 const listDataType kListPoison   = -666;
 const size_t kListMaxLen         = (1UL << 32);
 
 const size_t kMaxCommentLen         = 64;
+const char kParentDumpFolderName[] = "dump/";
+const char kImgFolderName[]        = "img/";
+const char kLogFileName[]          = "log.html";
+const char kGraphFileName[]        = "dot.txt";
+
+const size_t kLogFolderPathLen = 32;
+const size_t kFileNameLen      = 64;
 
 #define LIST_DO_AND_CHECK(action)           \
         do                                  \
@@ -36,7 +38,17 @@ struct varInfo_t
     int line         = 0;
     const char *func = NULL;
 };
+struct listLog_t
+{
+    char logFolderPath [kLogFolderPathLen] = {}; // dump/[date-time]
+    char imgFolderPath [kFileNameLen]      = {}; // dump/[date-time]/img
+    char logFilePath   [kFileNameLen]      = {}; // dump/[date-time]/log.html
+    char graphFilePath [kFileNameLen]      = {}; // dump/[date-time]/dot.txt
 
+    FILE *logFile  = NULL;
+    FILE *graphFile = NULL; // TODO: make more than one dot.txt file
+    // dot1.txt dot2.txt ...
+};
 
 #define LIST_CTOR(listName, size) ListCtor (&listName, size,                        \
                                             varInfo_t{.name = #listName,            \
@@ -90,6 +102,7 @@ enum listError_t
     LIST_ERROR_DELETE_IN_EMPTY_LIST     = 1 << 8,
     LIST_ERROR_DELETE_EMPTY_ELEMENT     = 1 << 9,
     LIST_ERROR_WRONG_INDEX              = 1 << 10,
+    LIST_ERROR_LOOPED                   = 1 << 11,
 
     LIST_ERROR_COMMON                   = 1 << 31
 };
@@ -100,8 +113,10 @@ int ListInsert          (list_t *list, size_t idx, listDataType val, size_t *ins
 int ListInsertBefore    (list_t *list, size_t idx, listDataType val, size_t *insertedIdx);
 int ListDelete          (list_t *list, size_t idx);
 int ListDeleteBefore    (list_t *list, size_t idx);
+#ifdef PRINT_DEBUG
 int ListDump            (list_t *list, const char *comment,
                          const char *_FILE, int _LINE, const char * _FUNC);
+#endif // PRINT_DEBUG
 int ListVerify          (list_t *list);
 void ListDtor           (list_t *list);
 
