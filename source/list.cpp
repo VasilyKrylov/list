@@ -29,7 +29,7 @@ int ListCtor (list_t *list, size_t capacity
 
     list->free = 1;
     list->capacity = capacity;
-    list->len = 0;
+    list->size = 0;
 
     list->elements[0] = {.data = 0, .next = 0, .prev = 0};
     for (size_t i = 1; i < capacity + 1; i++)
@@ -58,7 +58,7 @@ int ResizeElements (list_t *list)
 {
     assert (list);
 
-    if (list->len == list->capacity)
+    if (list->size == list->capacity)
     {
         list->capacity *= 2;
         listElement_t *newElemenets = (listElement_t *) realloc (list->elements, 
@@ -72,9 +72,9 @@ int ResizeElements (list_t *list)
         }
 
         list->elements = newElemenets;
-        list->free = list->len + 1;
+        list->free = list->size + 1;
         
-        for (size_t i = list->len + 1; i < list->capacity + 1; i++)
+        for (size_t i = list->size + 1; i < list->capacity + 1; i++)
         {
             list->elements[i].data = kListPoison;
             list->elements[i].prev = kListPrevFree;
@@ -105,7 +105,7 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
     if (status != LIST_ERROR_OK)
         return status;
 
-    list->len++;
+    list->size++;
 
     if (list->elements[idx].prev == kListPrevFree)
     {
@@ -172,7 +172,7 @@ int ListDelete (list_t *list, size_t idx)
     ssize_t prevIdx = list->elements[idx].prev;
     ssize_t nextIdx = list->elements[idx].next;
 
-    if (list->len == 0)
+    if (list->size == 0)
     {
         ERROR_LOG ("%s", "List is empty, but you are trying to delete something...");
 
@@ -190,7 +190,7 @@ int ListDelete (list_t *list, size_t idx)
 
         return LIST_ERROR_WRONG_INDEX;        
     }
-    list->len--;
+    list->size--;
 
     list->elements[nextIdx].prev = prevIdx;
     list->elements[prevIdx].next = nextIdx;

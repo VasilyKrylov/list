@@ -9,7 +9,8 @@ int TestRealloc (list_t *list);
 int Test3 (list_t *list);
 int Test4 (list_t *list);
 int TestBeforeFunctions (list_t *list);
-        
+int TestBadEdge (list_t *list);
+
 int TestRandom1 (list_t *list)
 {
     size_t saveIdx = 0;
@@ -73,25 +74,44 @@ int TestBeforeFunctions (list_t *list)
         LIST_DO_AND_CHECK (ListInsertBefore (list, i, (listDataType)(100 * i + i), &idx));
     }
 
-    ListDeleteBefore (list, 3);
-    ListDeleteBefore (list, 7);
-    ListInsertBefore (list, 3, 333, &idx);
-    ListDeleteBefore (list, 0);
-    ListDeleteBefore (list, 5);
-    ListInsertBefore (list, 5, 555, &idx);
-
-
+    LIST_DO_AND_CHECK (ListDeleteBefore (list, 3));
+    LIST_DO_AND_CHECK (ListDeleteBefore (list, 7));
+    LIST_DO_AND_CHECK (ListInsertBefore (list, 3, 333, &idx));
+    LIST_DO_AND_CHECK (ListDeleteBefore (list, 0));
+    LIST_DO_AND_CHECK (ListDeleteBefore (list, 5));
+    LIST_DO_AND_CHECK (ListInsertBefore (list, 5, 555, &idx));
 
     return LIST_ERROR_OK;
 }
 
-// TODO: Multiple dot files
+int TestBadEdge (list_t *list)
+{
+    size_t idx = 0;
+
+    for (size_t i = 0; i < list->capacity; i++)
+    {
+        LIST_DO_AND_CHECK ( ListInsert (list, i, (listDataType)(100 * i + i), &idx));
+    }
+
+    // list->elements[3].prev = 666;
+    LIST_DO_AND_CHECK (ListDelete (list, 5));
+    
+    return LIST_ERROR_OK;
+}
+
+// TODO: pointers in dump
+// TODO:
+// default node is scary
+// TODO:
+// в DUMP проходимся только по массиву, а не по next/prev
+// В верификаторе ходим по связям, но только size раз
+// если меньше size раз, то значит не хватает элементов
 int main()
 {
     list_t list;
     LIST_CTOR (list, 10);
 
-    int status = TestBeforeFunctions (&list);
+    int status = TestBadEdge (&list);
     if (status != LIST_ERROR_OK)
     {
         ListDtor (&list);

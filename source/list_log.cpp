@@ -84,14 +84,14 @@ int ListDump (list_t *list, const char *comment,
     DEBUG_LOG ("comment = \"%s\";", comment);
 
     fprintf (list->log.logFile,
-             "<h3>DUMP called at %s:%d:%s(): %s</h3>\n",
+             "<h3>DUMP called at %s:%d:%s(): <font style=\"color: green;\">%s</font></h3>\n",
              FILE_, LINE_, FUNC_, comment);
     fprintf (list->log.logFile,
-             "%s {%s:%d}\n",
-             list->varInfo.name, list->varInfo.file, list->varInfo.line);
+             "%s[%p] initialized in {%s:%d}\n",
+             list->varInfo.name, list, list->varInfo.file, list->varInfo.line);
 
     fprintf (list->log.logFile, "list->capacity = %lu\n", list->capacity);
-    fprintf (list->log.logFile, "list->len = %lu\n", list->len);
+    fprintf (list->log.logFile, "list->size = %lu\n", list->size);
     fprintf (list->log.logFile, "list->free = %lu\n", list->free);
 
     fprintf (list->log.logFile, "%s", "list->data: ");
@@ -151,7 +151,7 @@ int DumpMakeConfig (list_t *list)
         const char *color = kBlue;
         if (i == (size_t) kListStart)
             color = kGray;
-        else if ((ssize_t)i == list->elements[kListStart].next)
+        else if (i == ListGetHead (list))
             color = kDarkBlue;
         else if (i == list->free)
             color = kDarkGreen;

@@ -45,11 +45,8 @@ struct listLog_t
     char imgFolderPath [kFileNameLen]      = {}; // dump/[date-time]/img
     char dotFolderPath [kFileNameLen]      = {}; // dump/[date-time]/dot
     char logFilePath   [kFileNameLen]      = {}; // dump/[date-time]/log.html
-    // char graphFilePath [kFileNameLen]      = {}; // dump/[date-time]/dot.txt
 
     FILE *logFile  = NULL;
-    // FILE *graphFile = NULL; // TODO: make more than one dot.txt file
-    // dot1.txt dot2.txt ...
 };
 
 #define LIST_CTOR(listName, size) ListCtor (&listName, size,                        \
@@ -81,7 +78,7 @@ struct list_t
 
     size_t free = 1;
     size_t capacity = 0;
-    size_t len = 0;
+    size_t size = 0;
 
 #ifdef PRINT_DEBUG
     varInfo_t varInfo = {};
