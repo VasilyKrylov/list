@@ -103,13 +103,13 @@ int TestBadEdge (list_t *list)
     }
 
     LIST_DO_AND_CHECK (ListDelete (list, 5));
+    LIST_DO_AND_CHECK (ListDelete (list, 8));
 
     list->elements[3].prev = 666;
     list->elements[6].next = 228;
     list->elements[5].next = 272;
     LIST_DUMP (*list, "AFTER BAD EDIT");
 
-    LIST_DO_AND_CHECK (ListDelete (list, 8));
 
     
     return LIST_ERROR_OK;
@@ -138,12 +138,15 @@ int TestLoop (list_t *list)
 // [*] в DUMP проходимся только по массиву, а не по next/prev
 // [*] bidirectional nodes
 // [*] непарные стрелки жирные
+// [ ] В верификаторе ходим по связям, но только size раз
+// [ ] если меньше size раз, то значит не хватает элементов
+// [ ] canary
 int main()
 {
     list_t list;
     LIST_CTOR (list, 10);
 
-    int status = TestLoop (&list);
+    int status = TestBadEdge (&list);
     if (status != LIST_ERROR_OK)
     {
         ListDtor (&list);

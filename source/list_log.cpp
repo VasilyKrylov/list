@@ -11,9 +11,11 @@
 #ifdef PRINT_DEBUG
 static size_t imageCounter = 0;
 
-const char * const kGray        = "666666"; // TODO:
-const char * const kBlue        = "6666ff";
-const char * const kDarkBlue    = "3333ff";
+const char * const kViolet      = "cc99ff";
+const char * const kBlue        = "66ccff";
+
+const char * const kGray        = "ebebe0";
+const char * const kHeadColor   = kViolet;
 const char * const kGreen       = "99ff66";
 const char * const kDarkGreen   = "33cc33";
 const char * const kYellow      = "ffcc00";
@@ -145,7 +147,7 @@ int DumpMakeConfig (list_t *list)
     fprintf (graphFile  ,   "digraph G {\n"
                             "\trankdir=LR;\n"
                             "\tsplines=ortho;\n"
-                            "\tnode [shape=octagon; style=\"filled\"; fillcolor=red];\n");
+                            "\tnode [shape=octagon; style=\"filled\"; fillcolor=\"#ff8080\"];\n");
                             // "\tHEAD [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\";]",
                             // kYellow);
 
@@ -156,7 +158,7 @@ int DumpMakeConfig (list_t *list)
         if (i == (size_t) kListStart)
             color = kGray;
         else if (i == ListGetHead (list))
-            color = kDarkBlue;
+            color = kHeadColor;
         else if (i == list->free)
             color = kDarkGreen;
         else if (list->elements[i].prev == kListPrevFree)
@@ -164,9 +166,9 @@ int DumpMakeConfig (list_t *list)
         
         fprintf (graphFile          ,
                  "\telement%lu [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\"; "
-                 "label = \"idx = [%lu] | data = [%g] | next = [%zd] | prev = [%zd]\"];\n",
+                 "label = \"idx = [%lu] | data = [%g] | prev = [%zd] | next = [%zd] \"];\n",
                  i, color,
-                 i, list->elements[i].data, list->elements[i].next, list->elements[i].prev);
+                 i, list->elements[i].data, list->elements[i].prev, list->elements[i].next);
     }
 
     // to make them in one line
@@ -221,7 +223,7 @@ void DumpElementEdge (list_t *list, FILE *graphFile, size_t idx)
     if (IsValidIdx (list, (size_t)nextIdx) &&       
         IsBidirectional (list, idx, (size_t)nextIdx)) // good edge, bidirectional
     {
-        fprintf (graphFile, "\telement%lu->element%zd[dir=both, color=blue; constraint=false];\n", 
+        fprintf (graphFile, "\telement%lu->element%zd[dir=both, color=black; constraint=false];\n", 
                 idx, list->elements[idx].next);   
     }
     else if (!IsValidIdx (list, (size_t)nextIdx)) // bad edge, red arrow
@@ -231,7 +233,7 @@ void DumpElementEdge (list_t *list, FILE *graphFile, size_t idx)
     }
     else if (!IsBidirectional (list, idx, (size_t)nextIdx)) // ok edge, but only forward
     {
-        fprintf (graphFile, "\telement%lu->element%zd[color=blue; constraint=false];\n", 
+        fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=blue; constraint=false];\n", 
                 idx, list->elements[idx].next);
     }
     
@@ -242,7 +244,7 @@ void DumpElementEdge (list_t *list, FILE *graphFile, size_t idx)
     }
     else if (!IsBidirectional (list, (size_t)prevIdx, idx))
     {
-        fprintf (graphFile, "\telement%lu->element%zd[color=blue; constraint=false];\n", 
+        fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=orange; constraint=false];\n", 
                 idx, list->elements[idx].prev);
     }
 }

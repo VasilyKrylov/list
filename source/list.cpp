@@ -297,7 +297,7 @@ int ListVerify (list_t *list)
     for (size_t idx = list->free; idx != kListStart; idx = (size_t)list->elements[idx].next)
     {
         cnt++;
-
+    
         if (cnt > list->capacity)
         {
             ERROR_LOG ("%s", "List of free elements is looped");
@@ -387,7 +387,7 @@ int ListVerify (list_t *list)
             ERROR_LOG ("%s", "List of data elements is looped");
 
             error |= LIST_ERROR_BROKEN_FREE_ELEMENT;
-                
+
             return error;
         }
     }
