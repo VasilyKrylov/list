@@ -18,9 +18,12 @@ const char * const kGreen       = "99ff66";
 const char * const kDarkGreen   = "33cc33";
 const char * const kYellow      = "ffcc00";
 
-int ListDumpImg     (list_t *list);
-int DumpMakeConfig  (list_t *list);
-int DumpMakeImg     (list_t *list);
+int ListDumpImg         (list_t *list);
+int DumpMakeConfig      (list_t *list);
+int DumpMakeImg         (list_t *list);
+
+void DumpFreeEdge       (list_t *list, FILE *graphFile, size_t idx);
+void DumpElementEdge    (list_t *list, FILE *graphFile, size_t idx);
 
 int LogInit (listLog_t *log)
 {
@@ -178,48 +181,11 @@ int DumpMakeConfig (list_t *list)
     {
         if (list->elements[i].prev == kListPrevFree)
         {
-            if (IsValidIdx (list, (size_t)list->elements[i].next))
-                fprintf (graphFile, "\telement%lu->element%zd[color=green; constraint=false];\n", 
-                         i, list->elements[i].next);
-            else
-                fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
-                         i, list->elements[i].next);
+            DumpFreeEdge (list, graphFile, i);
         }
         else
         {
-            ssize_t nextIdx = list->elements[i].next;
-            ssize_t prevIdx = list->elements[i].prev;
-
-            if (IsValidIdx (list, (size_t)nextIdx) && 
-                IsBidirectional (list, i, (size_t)nextIdx)) 
-            {
-                fprintf (graphFile, "\telement%lu->element%zd[dir=both, color=blue; constraint=false];\n", 
-                        i, list->elements[i].next);   
-            }
-            else
-            {
-                if (!IsValidIdx (list, (size_t)nextIdx))
-                {
-                    fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
-                            i, list->elements[i].next);
-                }
-                else if (!IsBidirectional (list, i, (size_t)nextIdx))
-                {
-                    fprintf (graphFile, "\telement%lu->element%zd[color=blue; constraint=false];\n", 
-                            i, list->elements[i].next);
-                }
-            }
-            
-            if (!IsValidIdx (list, (size_t)prevIdx))
-            {
-                fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
-                        i, list->elements[i].prev);
-            }
-            else if (!IsBidirectional (list, (size_t)prevIdx, i))
-            {
-                fprintf (graphFile, "\telement%lu->element%zd[color=blue; constraint=false];\n", 
-                        i, list->elements[i].prev);
-            }
+            DumpElementEdge (list, graphFile, i);
         }
     }
 
@@ -231,6 +197,55 @@ int DumpMakeConfig (list_t *list)
     return LIST_ERROR_OK;
 }
 
+
+void DumpFreeEdge (list_t *list, FILE *graphFile, size_t idx)
+{
+    assert (list);
+    assert (graphFile);
+
+    if (IsValidIdx (list, (size_t)list->elements[idx].next))
+        fprintf (graphFile, "\telement%lu->element%zd[color=green; constraint=false];\n", 
+                 idx, list->elements[idx].next);
+    else
+        fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
+                 idx, list->elements[idx].next);
+}
+void DumpElementEdge (list_t *list, FILE *graphFile, size_t idx)
+{
+    assert (list);
+    assert (graphFile);
+
+    ssize_t nextIdx = list->elements[idx].next;
+    ssize_t prevIdx = list->elements[idx].prev;
+
+    if (IsValidIdx (list, (size_t)nextIdx) &&       
+        IsBidirectional (list, idx, (size_t)nextIdx)) // good edge, bidirectional
+    {
+        fprintf (graphFile, "\telement%lu->element%zd[dir=both, color=blue; constraint=false];\n", 
+                idx, list->elements[idx].next);   
+    }
+    else if (!IsValidIdx (list, (size_t)nextIdx)) // bad edge, red arrow
+    {
+        fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
+                idx, list->elements[idx].next);
+    }
+    else if (!IsBidirectional (list, idx, (size_t)nextIdx)) // ok edge, but only forward
+    {
+        fprintf (graphFile, "\telement%lu->element%zd[color=blue; constraint=false];\n", 
+                idx, list->elements[idx].next);
+    }
+    
+    if (!IsValidIdx (list, (size_t)prevIdx)) 
+    {
+        fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
+                idx, list->elements[idx].prev);
+    }
+    else if (!IsBidirectional (list, (size_t)prevIdx, idx))
+    {
+        fprintf (graphFile, "\telement%lu->element%zd[color=blue; constraint=false];\n", 
+                idx, list->elements[idx].prev);
+    }
+}
 int DumpMakeImg (list_t *list)
 {
     char imgFileName[kFileNameLen] = {};
