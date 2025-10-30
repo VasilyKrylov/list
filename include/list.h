@@ -117,6 +117,8 @@ int ListDeleteBefore    (list_t *list, size_t idx);
 int ListDump            (list_t *list, const char *comment,
                          const char *_FILE, int _LINE, const char * _FUNC);
 #endif // PRINT_DEBUG
+size_t ListGetHead      (list_t *list);
+size_t ListGetTail      (list_t *list);
 int ListVerify          (list_t *list);
 void ListDtor           (list_t *list);
 
