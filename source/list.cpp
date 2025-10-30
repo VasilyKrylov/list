@@ -317,6 +317,8 @@ int ListVerify (list_t *list)
             ERROR_LOG ("%s", "List of data elements is looped");
 
             error |= LIST_ERROR_LOOPED;
+
+            return error;
         }
     }
 
@@ -385,6 +387,8 @@ int ListVerify (list_t *list)
             ERROR_LOG ("%s", "List of data elements is looped");
 
             error |= LIST_ERROR_BROKEN_FREE_ELEMENT;
+                
+            return error;
         }
     }
 

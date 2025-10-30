@@ -7,10 +7,11 @@
 
 int TestRandom1 (list_t *list);
 int TestRealloc (list_t *list);
-int Test3 (list_t *list);
+int TestDelete (list_t *list);
 int Test4 (list_t *list);
 int TestBeforeFunctions (list_t *list);
 int TestBadEdge (list_t *list);
+int TestLoop (list_t *list);
 
 int TestRandom1 (list_t *list)
 {
@@ -41,8 +42,15 @@ int TestRealloc (list_t *list)
 
     return LIST_ERROR_OK;
 }
-int Test3 (list_t *list)
+int TestDelete (list_t *list)
 {
+    size_t idx = 0;
+
+    for (size_t i = 0; i < list->capacity; i++)
+    {
+        LIST_DO_AND_CHECK (ListInsert (list, i, (listDataType)(100 * i + i), &idx));
+    }
+
     for (size_t i = 1; i < list->capacity; i++)
     {
         LIST_DO_AND_CHECK (ListDelete (list, i));
@@ -107,19 +115,35 @@ int TestBadEdge (list_t *list)
     return LIST_ERROR_OK;
 }
 
+int TestLoop (list_t *list)
+{
+    size_t idx = 0;
+
+    for (size_t i = 0; i < list->capacity; i++)
+    {
+        LIST_DO_AND_CHECK ( ListInsert (list, i, (listDataType)(100 * i + i), &idx));
+    }
+
+    list->elements[list->capacity-1].next = 2;
+
+    LIST_DUMP (*list, "AFTER CREATING LOOP");
+    
+    LIST_DO_AND_CHECK (ListDelete (list, 3));
+    
+    return LIST_ERROR_OK;
+}
+
 // TODO:
 // [*] default node is scary
 // [*] в DUMP проходимся только по массиву, а не по next/prev
-// [ ] В верификаторе ходим по связям, но только size раз
-// [ ] если меньше size раз, то значит не хватает элементов
-// [ ] bidirectional nodes
-// [ ] непарные стрелки жирные
+// [*] bidirectional nodes
+// [*] непарные стрелки жирные
 int main()
 {
     list_t list;
     LIST_CTOR (list, 10);
 
-    int status = TestBadEdge (&list);
+    int status = TestLoop (&list);
     if (status != LIST_ERROR_OK)
     {
         ListDtor (&list);
