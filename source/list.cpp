@@ -298,7 +298,8 @@ int DumpMakeConfig (list_t *list)
     }
 
     fprintf (list->log.graphFile,   "digraph G {\n"
-                                    "\trankdir=LR;\n");
+                                    "\trankdir=LR;\n"
+                                    "\tsplines=ortho;\n");
                                     // "\tHEAD [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\";]",
                                     // kYellow);
 
@@ -339,7 +340,7 @@ int DumpMakeConfig (list_t *list)
     {
         if (list->elements[i].next == kListStart || i == kListStart)
         {
-            fprintf (list->log.graphFile, "element%lu[color=green constraint=false];\n", i);
+            fprintf (list->log.graphFile, "element%lu[color=green; constraint=false];\n", i);
             break;
         }
         else

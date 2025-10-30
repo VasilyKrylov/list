@@ -6,7 +6,7 @@
 
 #include "list_log.h"
 
-#ifdef PRING_DEBUG
+#ifdef PRINT_DEBUG
 int LogInit (listLog_t *log)
 {
     time_t t = time (NULL);

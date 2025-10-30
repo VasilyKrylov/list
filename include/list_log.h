@@ -3,7 +3,7 @@
 
 #include "list.h"
 
-#ifdef PRING_DEBUG
+#ifdef PRINT_DEBUG
 int LogInit (listLog_t *log);
 #endif // PRINT_DEBUG
 
