@@ -195,7 +195,7 @@ int main()
     list_t list;
     LIST_CTOR (list, 10);
 
-    int status = TestRealloc (&list);
+    int status = TestBadEdge (&list);
     if (status == 0)
     {
         printf ("%s", "All verificator tests passed!\n");

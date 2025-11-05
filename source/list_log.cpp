@@ -11,14 +11,19 @@
 #ifdef PRINT_DEBUG
 static size_t imageCounter = 0;
 
-const char * const kViolet      = "cc99ff";
-const char * const kBlue        = "66ccff";
+const char * const kBlack       = "#000000";
+const char * const kGray        = "#ebebe0";
 
-const char * const kGray        = "ebebe0";
+const char * const kViolet      = "#cc99ff";
+const char * const kBlue        = "#66ccff";
+
+const char * const kGreen       = "#99ff66";
+const char * const kDarkGreen   = "#33cc33";
+const char * const kYellow      = "#ffcc00";
+
 const char * const kHeadColor   = kViolet;
-const char * const kGreen       = "99ff66";
-const char * const kDarkGreen   = "33cc33";
-const char * const kYellow      = "ffcc00";
+const char * const kFreeColor   = kDarkGreen;
+const char * const kEdgeNormal  = kBlack;
 
 int ListDumpImg         (list_t *list);
 int DumpMakeConfig      (list_t *list);
@@ -145,10 +150,13 @@ int DumpMakeConfig (list_t *list)
     }
 
     fprintf (graphFile  ,   "digraph G {\n"
-                            "\trankdir=LR;\n"
                             "\tsplines=ortho;\n"
-                            "\tnode [shape=octagon; style=\"filled\"; fillcolor=\"#ff8080\"];\n");
-                            // "\tHEAD [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\";]",
+                            "\tnodesep=0.5;\n"
+                            "\tnode [shape=octagon; style=\"filled\"; fillcolor=\"#ff8080\"];\n"
+                            "\tHEAD [shape=octagon; style=\"filled\"; fillcolor=\"%s\"];\n"
+                            "\tFREE [shape=octagon; style=\"filled\"; fillcolor=\"%s\"];\n",
+                            kHeadColor, kFreeColor);
+                            // "\tHEAD [shape=Mrecord; style=\"filled\"; fillcolor=\"%s\";]",
                             // kYellow);
 
     // Style for each node
@@ -160,13 +168,13 @@ int DumpMakeConfig (list_t *list)
         else if (i == ListGetHead (list))
             color = kHeadColor;
         else if (i == list->free)
-            color = kDarkGreen;
+            color = kFreeColor;
         else if (list->elements[i].prev == kListPrevFree)
             color = kGreen; 
         
         fprintf (graphFile          ,
-                 "\telement%lu [shape=Mrecord; style=\"filled\"; fillcolor=\"#%s\"; "
-                 "label = \"idx = [%lu] | data = [%g] | prev = [%zd] | next = [%zd] \"];\n",
+                 "\telement%lu [shape=Mrecord; style=\"filled\"; fillcolor=\"%s\"; "
+                 "label = \"{idx = [%lu] | data = [%g] | prev = [%zd] | next = [%zd] }\"];\n",
                  i, color,
                  i, list->elements[i].data, list->elements[i].prev, list->elements[i].next);
     }
@@ -191,7 +199,17 @@ int DumpMakeConfig (list_t *list)
         }
     }
 
-    // fprintf (graphFile          , "\tHEAD->element%lu[color=yellow; constraint=false];\n", ListGetHead (list));
+    fprintf (graphFile, "\tHEAD->element%lu[color=\"%s\"; constraint=true];\n", ListGetHead (list), kEdgeNormal);
+    fprintf (graphFile, "\tFREE->element%lu[color=\"%s\"; constraint=true];\n", list->free,         kEdgeNormal);
+    fprintf (graphFile, "%s", "\t{rank = source; HEAD}\n");
+    fprintf (graphFile, "%s", "\t{rank = source; FREE}\n");
+
+    fprintf (graphFile, "%s", "\t{rank = same; ");
+    for (size_t i = 0; i < list->capacity + 1; i++)
+    {
+        fprintf (graphFile, "element%lu; ", i);
+    }
+    fprintf (graphFile, "%s", " }\n");
 
     fprintf (graphFile, "%s", "}");
     fclose (graphFile);
@@ -206,11 +224,18 @@ void DumpFreeEdge (list_t *list, FILE *graphFile, size_t idx)
     assert (graphFile);
 
     if (IsValidIdx (list, (size_t)list->elements[idx].next))
+    {
         fprintf (graphFile, "\telement%lu->element%zd[color=green; constraint=false];\n", 
                  idx, list->elements[idx].next);
+    }
     else
+    {
         fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
                  idx, list->elements[idx].next);
+
+        fprintf (graphFile, "\t{rank = sink; element%zd;}\n", 
+                 list->elements[idx].next); // to make broken element at the bottom of the picture
+    }
 }
 void DumpElementEdge (list_t *list, FILE *graphFile, size_t idx)
 {
@@ -223,29 +248,35 @@ void DumpElementEdge (list_t *list, FILE *graphFile, size_t idx)
     if (IsValidIdx (list, (size_t)nextIdx) &&       
         IsBidirectional (list, idx, (size_t)nextIdx)) // good edge, bidirectional
     {
-        fprintf (graphFile, "\telement%lu->element%zd[dir=both, color=black; constraint=false];\n", 
-                idx, list->elements[idx].next);   
+        fprintf (graphFile, "\telement%lu->element%zd[dir=both, color=\"%s\"; constraint=false];\n", 
+                 idx, nextIdx, kEdgeNormal);   
     }
     else if (!IsValidIdx (list, (size_t)nextIdx)) // bad edge, red arrow
     {
         fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
-                idx, list->elements[idx].next);
+                 idx, nextIdx);
+        
+        fprintf (graphFile, "\t{rank = sink; element%zd;}\n", 
+                 nextIdx); // to make broken element at the bottom of the picture
     }
     else if (!IsBidirectional (list, idx, (size_t)nextIdx)) // ok edge, but only forward
     {
         fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=blue; constraint=false];\n", 
-                idx, list->elements[idx].next);
+                 idx, nextIdx);
     }
     
     if (!IsValidIdx (list, (size_t)prevIdx)) 
     {
         fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=red; constraint=false];\n", 
-                idx, list->elements[idx].prev);
+                idx, prevIdx);
+
+        fprintf (graphFile, "\t{rank = sink; element%zd;}\n", 
+                 prevIdx); // to make broken element at the bottom of the picture
     }
     else if (!IsBidirectional (list, (size_t)prevIdx, idx))
     {
         fprintf (graphFile, "\telement%lu->element%zd[style=\"bold\"; color=orange; constraint=false];\n", 
-                idx, list->elements[idx].prev);
+                idx, prevIdx);
     }
 }
 int DumpMakeImg (list_t *list)
