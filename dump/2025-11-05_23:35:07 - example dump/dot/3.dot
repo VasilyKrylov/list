@@ -1,0 +1,45 @@
+digraph G {
+	splines=ortho;
+	nodesep=0.5;
+	node [shape=octagon; style="filled"; fillcolor="#ff8080"];
+	HEAD [shape=octagon; style="filled"; fillcolor="#cc99ff"];
+	FREE [shape=octagon; style="filled"; fillcolor="#33cc33"];
+	element0 [shape=Mrecord; style="filled"; fillcolor="#ebebe0"; label = "{idx = [0] | data = [0] | prev = [1] | next = [1] }"];
+	element1 [shape=Mrecord; style="filled"; fillcolor="#cc99ff"; label = "{idx = [1] | data = [0] | prev = [0] | next = [0] }"];
+	element2 [shape=Mrecord; style="filled"; fillcolor="#33cc33"; label = "{idx = [2] | data = [-666] | prev = [-1] | next = [3] }"];
+	element3 [shape=Mrecord; style="filled"; fillcolor="#99ff66"; label = "{idx = [3] | data = [-666] | prev = [-1] | next = [4] }"];
+	element4 [shape=Mrecord; style="filled"; fillcolor="#99ff66"; label = "{idx = [4] | data = [-666] | prev = [-1] | next = [5] }"];
+	element5 [shape=Mrecord; style="filled"; fillcolor="#99ff66"; label = "{idx = [5] | data = [-666] | prev = [-1] | next = [6] }"];
+	element6 [shape=Mrecord; style="filled"; fillcolor="#99ff66"; label = "{idx = [6] | data = [-666] | prev = [-1] | next = [7] }"];
+	element7 [shape=Mrecord; style="filled"; fillcolor="#99ff66"; label = "{idx = [7] | data = [-666] | prev = [-1] | next = [8] }"];
+	element8 [shape=Mrecord; style="filled"; fillcolor="#99ff66"; label = "{idx = [8] | data = [-666] | prev = [-1] | next = [9] }"];
+	element9 [shape=Mrecord; style="filled"; fillcolor="#99ff66"; label = "{idx = [9] | data = [-666] | prev = [-1] | next = [10] }"];
+	element10 [shape=Mrecord; style="filled"; fillcolor="#99ff66"; label = "{idx = [10] | data = [-666] | prev = [-1] | next = [0] }"];
+	edge [color=invis];
+	element0->element1;
+	element1->element2;
+	element2->element3;
+	element3->element4;
+	element4->element5;
+	element5->element6;
+	element6->element7;
+	element7->element8;
+	element8->element9;
+	element9->element10;
+	edge [style=""];
+	element0->element1[dir=both, color="#000000"; constraint=false];
+	element1->element0[dir=both, color="#000000"; constraint=false];
+	element2->element3[color=green; constraint=false];
+	element3->element4[color=green; constraint=false];
+	element4->element5[color=green; constraint=false];
+	element5->element6[color=green; constraint=false];
+	element6->element7[color=green; constraint=false];
+	element7->element8[color=green; constraint=false];
+	element8->element9[color=green; constraint=false];
+	element9->element10[color=green; constraint=false];
+	HEAD->element1[color="#000000"; constraint=true];
+	FREE->element2[color="#000000"; constraint=true];
+	{rank = source; HEAD}
+	{rank = source; FREE}
+	{rank = same; element0; element1; element2; element3; element4; element5; element6; element7; element8; element9; element10;  }
+}
