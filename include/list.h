@@ -3,24 +3,17 @@
 
 #include <stdio.h>
 
+#include "list_log.h"
 #include "debug.h"
+
 typedef double listDataType;
 
 const size_t kListStart          = 0;
+const size_t kMaxCommentLen         = 64;
 
 const ssize_t kListPrevFree      = -1;
 const listDataType kListPoison   = -666;
 const size_t kListMaxLen         = (1UL << 32);
-
-const size_t kMaxCommentLen         = 64;
-const char kParentDumpFolderName[] = "dump/";
-const char kImgFolderName[]        = "img/";
-const char kDotFolderName[]        = "dot/";
-const char kLogFileName[]          = "log.html";
-const char kGraphFileName[]        = "dot.txt";
-
-const size_t kLogFolderPathLen       = 44;
-const size_t kFileNameLen            = 64;
 
 #define LIST_DO_AND_CHECK(action)           \
         do                                  \
@@ -40,23 +33,13 @@ struct varInfo_t
     int line         = 0;
     const char *func = NULL;
 };
-struct listLog_t
-{
-    char logFolderPath [kLogFolderPathLen] = {}; // dump/[date-time]
-    char imgFolderPath [kFileNameLen]      = {}; // dump/[date-time]/img
-    char dotFolderPath [kFileNameLen]      = {}; // dump/[date-time]/dot
-    char logFilePath   [kFileNameLen]      = {}; // dump/[date-time]/log.html
-
-    FILE *logFile  = NULL;
-};
-
 #define LIST_CTOR(listName, size) ListCtor (&listName, size,                        \
                                             varInfo_t{.name = #listName,            \
                                                       .file = __FILE__,             \
                                                       .line = __LINE__,             \
                                                       .func = __func__})
 #define LIST_VERIFY(list) ListVerify(list)
-#define LIST_DUMP(listName, comment) ListDump (&listName, comment, __FILE__, __LINE__, __func__)
+#define LIST_DUMP(listName, comment) ListDump (listName, comment, __FILE__, __LINE__, __func__)
 
 #else
 
@@ -102,8 +85,9 @@ enum listError_t
     LIST_ERROR_DELETE_IN_EMPTY_LIST     = 1 << 8,
     LIST_ERROR_DELETE_EMPTY_ELEMENT     = 1 << 9,
     LIST_ERROR_WRONG_INDEX              = 1 << 10,
-    LIST_ERROR_LOOPED                   = 1 << 11,
-    LIST_ERROR_IDX_OUT_OF_BOUNDS        = 1 << 12,
+    LIST_ERROR_DATA_LOOPED              = 1 << 11,
+    LIST_ERROR_FREE_LOOPED              = 1 << 12,
+    LIST_ERROR_IDX_OUT_OF_BOUNDS        = 1 << 13,
 
     LIST_ERROR_COMMON                   = 1 << 31
 };

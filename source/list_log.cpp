@@ -200,7 +200,7 @@ int DumpMakeConfig (list_t *list)
     }
 
     fprintf (graphFile, "\tHEAD->element%lu[color=\"%s\"; constraint=true];\n", ListGetHead (list), kEdgeNormal);
-    fprintf (graphFile, "\tFREE->element%lu[color=\"%s\"; constraint=true];\n", list->free,         kEdgeNormal);
+    fprintf (graphFile, "\tFREE->element%lu[color=green; constraint=true];\n", list->free);
     fprintf (graphFile, "%s", "\t{rank = source; HEAD}\n");
     fprintf (graphFile, "%s", "\t{rank = source; FREE}\n");
 

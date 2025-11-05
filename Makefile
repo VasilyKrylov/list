@@ -1,9 +1,10 @@
 CPP_FILES = common/source/debug.cpp 		\
 			common/source/file_utils.cpp 	\
 			common/source/float_math.cpp 	\
+			source/list.cpp 				\
+			source/list_tests.cpp 			\
 			source/list_log.cpp 			\
-			source/main.cpp 				\
-			source/list.cpp
+			source/main.cpp
 
 .PHONY: all
 all:

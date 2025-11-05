@@ -56,7 +56,7 @@ int ListCtor (list_t *list, size_t capacity
 
 #endif // PRING_DEBUG
 
-    LIST_DUMP (*list, "After ctor");
+    LIST_DUMP (list, "After ctor");
 
     return LIST_VERIFY (list);
 }
@@ -91,7 +91,7 @@ int ResizeElements (list_t *list)
         
         DEBUG_LOG ("list->elements reallocated to %lu capacity", list->capacity + 1);
 
-        LIST_DUMP (*list, "After realloc");
+        LIST_DUMP (list, "After realloc");
     }
 
     return LIST_ERROR_OK;
@@ -104,7 +104,7 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
 
     char comment[kMaxCommentLen] = {};
     snprintf (comment, kMaxCommentLen, "before Insert() [%lu], val = %g", idx, val); // TODO: function
-    LIST_DUMP (*list, comment); // TODO: not another function, just vprintf
+    LIST_DUMP (list, comment); // TODO: not another function, just vprintf
 
     LIST_DO_AND_CHECK (LIST_VERIFY (list));
 
@@ -140,7 +140,7 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
     list->elements[nextIdx].prev = (ssize_t)*insertedIdx;
     list->elements[idx].next     = (ssize_t)*insertedIdx;
 
-    LIST_DUMP (*list, "after Insert()");
+    LIST_DUMP (list, "after Insert()");
     
     return LIST_VERIFY (list);
 }
@@ -172,7 +172,7 @@ int ListDelete (list_t *list, size_t idx)
 
     char comment[kMaxCommentLen] = {};
     snprintf (comment, kMaxCommentLen, "before Delete() [%lu]", idx);
-    LIST_DUMP (*list, comment);
+    LIST_DUMP (list, comment);
 
     LIST_DO_AND_CHECK (LIST_VERIFY (list));
     DEBUG_LOG ("%s", "first verify passed");
@@ -209,7 +209,7 @@ int ListDelete (list_t *list, size_t idx)
 
     list->free = idx;
 
-    LIST_DUMP (*list, "after Delte()");
+    LIST_DUMP (list, "after Delte()");
 
     return LIST_VERIFY (list);
 }
@@ -257,7 +257,14 @@ bool IsBidirectional (list_t *list, size_t node1, size_t node2)
 {
     assert (list);
 
-    return list->elements[node1].next == (ssize_t) node2 && list->elements[node2].prev == (ssize_t) node1;
+    bool bidirectional = list->elements[node1].next == (ssize_t) node2 && 
+                         list->elements[node2].prev == (ssize_t) node1;
+    
+    if (list->size > 1)
+        bidirectional &= (list->elements[node2].next != (ssize_t) node1 &&
+                          list->elements[node1].prev != (ssize_t) node2);
+    
+    return bidirectional;
 }
 
 void ListDtor (list_t *list)
@@ -283,13 +290,21 @@ int ListVerify (list_t *list)
     error = CheckIdxes (list);
 
     if (error != LIST_ERROR_OK)
+    {
+        DEBUG_VAR ("%d", error);
+
         return error;
+    }
 
     error |= CheckFreeListCount     (list);
     error |= CheckElementsListCount (list);
 
     if (error != LIST_ERROR_OK)
+    {
+        DEBUG_VAR ("%d", error);
+        
         return error;
+    }
 
     error |= CheckNextEdges (list);
     error |= CheckPrevEdges (list);
@@ -297,6 +312,8 @@ int ListVerify (list_t *list)
     error |= CheckFreeElementsPrev (list);
 
     // FIXME: Check poison data
+
+    DEBUG_VAR ("%d", error);
 
     return error;
 }
@@ -340,7 +357,7 @@ int CheckFreeListCount (list_t *list)
         {
             ERROR_LOG ("%s", "List of free elements is looped");
 
-            return LIST_ERROR_LOOPED;
+            return LIST_ERROR_FREE_LOOPED;
         }
     }
     if (cnt < list->capacity)
@@ -365,7 +382,7 @@ int CheckElementsListCount (list_t *list)
         {
             ERROR_LOG ("%s", "List of data elements is looped");
 
-            return LIST_ERROR_LOOPED;
+            return LIST_ERROR_DATA_LOOPED;
         }
     }
     if (cnt < list->capacity)
@@ -384,7 +401,8 @@ int CheckNextEdges (list_t *list)
          list->elements[idx].next != kListStart; 
          idx = list->elements[idx].next)
     {
-        DEBUG_VAR ("%zd", idx);
+        DEBUG_VAR ("%zd", idx);        DEBUG_VAR ("%zd", idx);
+
 
         ssize_t prevIdx = list->elements[idx].prev;
 
