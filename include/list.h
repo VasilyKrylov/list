@@ -60,7 +60,7 @@ struct listLog_t
 
 #else
 
-#define LIST_CTOR(listName, size) ListCtor (&listName, size);
+#define LIST_CTOR(listName, size) ListCtor (&listName, size) // NOTE: removed ;
 #define LIST_VERIFY(list) LIST_ERROR_OK;
 #define LIST_DUMP(list, comment) 
 
@@ -103,7 +103,7 @@ enum listError_t
     LIST_ERROR_DELETE_EMPTY_ELEMENT     = 1 << 9,
     LIST_ERROR_WRONG_INDEX              = 1 << 10,
     LIST_ERROR_LOOPED                   = 1 << 11,
-    LIST_ERROR_BROKEN_IDX               = 1 << 12,
+    LIST_ERROR_IDX_OUT_OF_BOUNDS        = 1 << 12,
 
     LIST_ERROR_COMMON                   = 1 << 31
 };

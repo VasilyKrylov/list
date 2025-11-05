@@ -13,6 +13,13 @@
 
 int ResizeElements  (list_t *list);
 
+int CheckIdxes              (list_t *list);
+int CheckFreeListCount      (list_t *list);
+int CheckElementsListCount  (list_t *list);
+int CheckPrevEdges          (list_t *list);
+int CheckNextEdges          (list_t *list);
+int CheckFreeElementsPrev   (list_t *list);
+
 int ListCtor (list_t *list, size_t capacity
               ON_DEBUG (, varInfo_t varInfo))
 {
@@ -97,7 +104,7 @@ int ListInsert (list_t *list, size_t idx, listDataType val, size_t *insertedIdx)
 
     char comment[kMaxCommentLen] = {};
     snprintf (comment, kMaxCommentLen, "before Insert() [%lu], val = %g", idx, val); // TODO: function
-    LIST_DUMP (*list, comment);
+    LIST_DUMP (*list, comment); // TODO: not another function, just vprintf
 
     LIST_DO_AND_CHECK (LIST_VERIFY (list));
 
@@ -143,17 +150,17 @@ int ListInsertBefore (list_t *list, size_t idx, listDataType val, size_t *insert
     assert (list);
     assert (insertedIdx);
 
-    if (list->elements[idx].prev == kListPrevFree)
-    {
-        ERROR_LOG ("%s", "Can't insert before empty element :(");
-
-        return LIST_ERROR_INSERT_AFTER_EMPTY;
-    }
     if (idx > list->capacity)
     {
         ERROR_LOG ("Index [%lu] is grater than capacity = %lu", idx, list->capacity);
 
         return LIST_ERROR_WRONG_INDEX;        
+    }
+    if (list->elements[idx].prev == kListPrevFree)
+    {
+        ERROR_LOG ("%s", "Can't insert before empty element :(");
+
+        return LIST_ERROR_INSERT_AFTER_EMPTY;
     }
 
     return ListInsert (list, (size_t)list->elements[idx].prev, val, insertedIdx);
@@ -273,7 +280,31 @@ int ListVerify (list_t *list)
     
     int error = LIST_ERROR_OK;
 
-    DEBUG_LOG ("%s", "Check valid indexes:");
+    error = CheckIdxes (list);
+
+    if (error != LIST_ERROR_OK)
+        return error;
+
+    error |= CheckFreeListCount     (list);
+    error |= CheckElementsListCount (list);
+
+    if (error != LIST_ERROR_OK)
+        return error;
+
+    error |= CheckNextEdges (list);
+    error |= CheckPrevEdges (list);
+
+    error |= CheckFreeElementsPrev (list);
+
+    // FIXME: Check poison data
+
+    return error;
+}
+
+int CheckIdxes (list_t *list)
+{
+    DEBUG_LOG ("%s", "Check valid indexes");
+
     for (size_t i = 0; i < list->capacity + 1; i++)
     {
         if (list->elements[i].next > (ssize_t) list->capacity)
@@ -281,19 +312,26 @@ int ListVerify (list_t *list)
             ERROR_LOG ("[%lu]->next = %zd; - index grater than capacity=%lu",
                         i, list->elements[i].next, list->capacity);
 
-            return LIST_ERROR_BROKEN_IDX;
+            return LIST_ERROR_IDX_OUT_OF_BOUNDS;
         }
         if (list->elements[i].prev > (ssize_t) list->capacity)
         {
             ERROR_LOG ("[%lu]->prev = %zd; - index grater than capacity=%lu",
                         i, list->elements[i].prev, list->capacity);
 
-            return LIST_ERROR_BROKEN_IDX;
+            return LIST_ERROR_IDX_OUT_OF_BOUNDS;
         }
     }
+    
+    return LIST_ERROR_OK;
+}
 
+int CheckFreeListCount (list_t *list)
+{
     DEBUG_LOG ("%s", "Check loop in free list:");
+
     size_t cnt = 0;
+
     for (size_t idx = list->free; idx != kListStart; idx = (size_t)list->elements[idx].next)
     {
         cnt++;
@@ -302,12 +340,23 @@ int ListVerify (list_t *list)
         {
             ERROR_LOG ("%s", "List of free elements is looped");
 
-            error |= LIST_ERROR_LOOPED;
+            return LIST_ERROR_LOOPED;
         }
     }
+    if (cnt < list->capacity)
+    {
+        // FIXME:
+    }
 
+    return LIST_ERROR_OK;
+}
+
+int CheckElementsListCount (list_t *list)
+{
     DEBUG_LOG ("%s", "Check loop in data list:");
-    cnt = 0;
+
+    size_t cnt = 0;
+
     for (size_t idx = ListGetHead (list); idx != kListStart; idx = (size_t)list->elements[idx].next)
     {
         cnt++;
@@ -316,15 +365,19 @@ int ListVerify (list_t *list)
         {
             ERROR_LOG ("%s", "List of data elements is looped");
 
-            error |= LIST_ERROR_LOOPED;
-
-            return error;
+            return LIST_ERROR_LOOPED;
         }
     }
+    if (cnt < list->capacity)
+    {
+        // FIXME:
+    }
 
-    if (error != LIST_ERROR_OK)
-        return error;
+    return LIST_ERROR_OK;
+}
 
+int CheckNextEdges (list_t *list)
+{
     DEBUG_LOG ("%s", "Check next edges:");
 
     for (ssize_t idx = (ssize_t) ListGetHead (list); 
@@ -341,11 +394,18 @@ int ListVerify (list_t *list)
                        idx, prevIdx);
             ERROR_LOG ("list->elements[%zd].prev = %zd;", idx, list->elements[idx].prev);
 
-            error |= LIST_ERROR_BROKEN_NEXT_EDGE;
+            return LIST_ERROR_BROKEN_NEXT_EDGE;
         }
     }
+    
+    return LIST_ERROR_OK;
+}
 
+int CheckPrevEdges (list_t *list)
+{
     DEBUG_LOG ("%s", "Check prev edges:");
+
+    int error = LIST_ERROR_OK;
 
     for (ssize_t idx = (ssize_t) ListGetTail (list); 
          list->elements[idx].prev != kListStart; 
@@ -366,31 +426,35 @@ int ListVerify (list_t *list)
 
             error |= LIST_ERROR_BROKEN_PREV_EDGE;
         }
-
-
+                
         if (IsEqual(list->elements[idx].data, kListPoison))
         {
-            ERROR_LOG ("Poison data in data element [%zd]", idx);
+            ERROR_LOG ("Poison data in not free element [%zd]", idx);
 
             error |= LIST_ERROR_POISON_IN_DATA;
         }
-
     }
 
+    return error;
+}
+
+int CheckFreeElementsPrev (list_t *list)
+{
     DEBUG_LOG ("%s", "Check free elements:");
+
+    size_t cnt = 0;
+
     for (size_t idx = list->free; idx != kListStart; idx = (size_t)list->elements[idx].next)
     {
         cnt++;
 
         if (list->elements[idx].prev != kListPrevFree)
         {
-            ERROR_LOG ("%s", "List of data elements is looped");
+            ERROR_LOG ("%s", "[%lu].prev = %zd, but should be %zd");
 
-            error |= LIST_ERROR_BROKEN_FREE_ELEMENT;
-
-            return error;
+            return LIST_ERROR_BROKEN_FREE_ELEMENT;
         }
     }
 
-    return error;
+    return LIST_ERROR_OK;
 }
