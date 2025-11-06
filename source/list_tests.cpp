@@ -169,15 +169,17 @@ int TestBadIdxes (list_t *list)
 
 int TestBadLoop (list_t *list)
 {
+    
     LIST_DUMP (list, "Before loop created");
-
+    
     ssize_t saveNext = list->elements[3].next;
     
     list->elements[3].next = list->elements[3].prev;
     LIST_DUMP (list, "After loop created");
-
-    if ((ListVerify (list) & LIST_ERROR_DATA_LOOPED) == 0)
-        return LIST_ERROR_DATA_LOOPED;
+    
+    int rightError = LIST_ERROR_BROKEN_NEXT_EDGE & LIST_ERROR_BROKEN_PREV_EDGE;
+    if ((ListVerify (list) & rightError) == 0)
+        return rightError;
     
     list->elements[3].next = saveNext;
         
@@ -189,8 +191,8 @@ int TestBadLoop (list_t *list)
     list->elements[5].prev = list->elements[5].next;
     LIST_DUMP (list, "After loop created");
 
-    if ((ListVerify (list) & LIST_ERROR_DATA_LOOPED) == 0)
-        return LIST_ERROR_DATA_LOOPED;
+    if ((ListVerify (list) & rightError) == 0)
+        return rightError;
     
     list->elements[5].prev = savePrev;
 
@@ -218,7 +220,8 @@ int TestVerificator ()
 
     for (size_t i = 0; i < list.capacity / 2; i++)
     {
-        LIST_DO_AND_CHECK (ListInsert (&list, i, (listDataType)(100 * i + i), &idx));
+        LIST_DO_AND_CLEAR (ListInsert (&list, i, (listDataType)(100 * i + i), &idx),
+                           ListDtor (&list));
     }
 
     TEST_FUNC (TestBadLoop);

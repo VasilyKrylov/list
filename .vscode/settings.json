@@ -13,6 +13,8 @@
         "complex": "cpp",
         "vector": "cpp",
         "list": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "ranges": "cpp",
+        "span": "cpp"
     },
 }

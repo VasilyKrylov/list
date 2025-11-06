@@ -253,6 +253,8 @@ bool IsValidIdx (list_t *list, size_t idx)
     return idx < list->capacity + 1;
 }
 
+// node1->node2
+// node2 is next for node1
 bool IsBidirectional (list_t *list, size_t node1, size_t node2)
 {
     assert (list);
@@ -296,6 +298,7 @@ int ListVerify (list_t *list)
         return error;
     }
 
+    // FIXME: do not need this i think (?)
     error |= CheckFreeListCount     (list);
     error |= CheckElementsListCount (list);
 
@@ -313,6 +316,12 @@ int ListVerify (list_t *list)
 
     // FIXME: Check poison data
 
+        // if (IsEqual(list->elements[i].data, kListPoison))
+        // {
+        //     ERROR_LOG ("Poison data in not free element [%lu]", i);
+
+        //     error |= LIST_ERROR_POISON_IN_DATA;
+        // }
     DEBUG_VAR ("%d", error);
 
     return error;
@@ -392,69 +401,107 @@ int CheckElementsListCount (list_t *list)
 
     return LIST_ERROR_OK;
 }
-
 int CheckNextEdges (list_t *list)
 {
-    DEBUG_LOG ("%s", "Check next edges:");
-
-    for (ssize_t idx = (ssize_t) ListGetHead (list); 
-         list->elements[idx].next != kListStart; 
-         idx = list->elements[idx].next)
+    for (size_t i = 0; i < list->capacity; i++)
     {
-        DEBUG_VAR ("%zd", idx);        DEBUG_VAR ("%zd", idx);
+        ssize_t nextIdx = list->elements[i].next;
 
-
-        ssize_t prevIdx = list->elements[idx].prev;
-
-        if (list->elements[prevIdx].next != idx)
+        if (list->elements[i].prev != kListPrevFree &&
+            !IsBidirectional (list, i, (size_t)nextIdx))
         {
-            ERROR_LOG ("Next edge between [%zd] and [%zd] elements is broken",
-                       idx, prevIdx);
-            ERROR_LOG ("list->elements[%zd].prev = %zd;", idx, list->elements[idx].prev);
-
+            ERROR_LOG ("Next Edge between [%lu] and [%zd] elements is broken",
+                       i, nextIdx);
+            
             return LIST_ERROR_BROKEN_NEXT_EDGE;
         }
     }
-    
+
     return LIST_ERROR_OK;
 }
-
 int CheckPrevEdges (list_t *list)
 {
-    DEBUG_LOG ("%s", "Check prev edges:");
-
     int error = LIST_ERROR_OK;
 
-    for (ssize_t idx = (ssize_t) ListGetTail (list); 
-         list->elements[idx].prev != kListStart; 
-         idx = list->elements[idx].prev)
+    for (size_t i = 0; i < list->capacity; i++)
     {
-        DEBUG_VAR ("%zd", idx);
-        ssize_t nextIdx = list->elements[idx].next;
+        ssize_t prevIdx = list->elements[i].prev;
 
-        if (nextIdx == 0)
-            break;
-
-        if (list->elements[nextIdx].prev != idx)
+        if (prevIdx != kListPrevFree &&
+            !IsBidirectional (list, (size_t)prevIdx, i))
         {
-            ERROR_LOG ("Prev edge between [%zd] and [%zd] elements is broken",
-                       idx, nextIdx);
-            ERROR_LOG ("list->elements[%zd].next = %zd;", idx, list->elements[idx].next);
-            ERROR_LOG ("list->elements[%zd].prev = %zd;", nextIdx, list->elements[idx].prev);
+            ERROR_LOG ("Prev edge between [%zd] and [%lu] elements is broken",
+                       prevIdx, i);
 
             error |= LIST_ERROR_BROKEN_PREV_EDGE;
         }
-                
-        if (IsEqual(list->elements[idx].data, kListPoison))
-        {
-            ERROR_LOG ("Poison data in not free element [%zd]", idx);
-
-            error |= LIST_ERROR_POISON_IN_DATA;
-        }
     }
-
+    
     return error;
 }
+
+// int CheckNextEdges (list_t *list)
+// {
+//     DEBUG_LOG ("%s", "Check next edges:");
+
+//     for (ssize_t idx = (ssize_t) ListGetHead (list); 
+//          list->elements[idx].next != kListStart; 
+//          idx = list->elements[idx].next)
+//     {
+//         DEBUG_VAR ("%zd", idx);
+
+
+//         ssize_t prevIdx = list->elements[idx].prev;
+
+//         if (list->elements[prevIdx].next != idx)
+//         {
+//             ERROR_LOG ("Next edge between [%zd] and [%zd] elements is broken",
+//                        idx, prevIdx);
+//             ERROR_LOG ("list->elements[%zd].prev = %zd;", idx, list->elements[idx].prev);
+
+//             return LIST_ERROR_BROKEN_NEXT_EDGE;
+//         }
+//     }
+    
+//     return LIST_ERROR_OK;
+// }
+
+// int CheckPrevEdges (list_t *list)
+// {
+//     DEBUG_LOG ("%s", "Check prev edges:");
+
+//     int error = LIST_ERROR_OK;
+
+//     for (ssize_t idx = (ssize_t) ListGetTail (list); 
+//          list->elements[idx].prev != kListStart; 
+//          idx = list->elements[idx].prev)
+//     {
+//         DEBUG_VAR ("%zd", idx);
+//         ssize_t nextIdx = list->elements[idx].next;
+
+//         if (nextIdx == 0)
+//             break;
+
+//         if (list->elements[nextIdx].prev != idx)
+//         {
+//             ERROR_LOG ("Prev edge between [%zd] and [%zd] elements is broken",
+//                        idx, nextIdx);
+//             ERROR_LOG ("list->elements[%zd].next = %zd;", idx, list->elements[idx].next);
+//             ERROR_LOG ("list->elements[%zd].prev = %zd;", nextIdx, list->elements[idx].prev);
+
+//             error |= LIST_ERROR_BROKEN_PREV_EDGE;
+//         }
+                
+//         if (IsEqual(list->elements[idx].data, kListPoison))
+//         {
+//             ERROR_LOG ("Poison data in not free element [%zd]", idx);
+
+//             error |= LIST_ERROR_POISON_IN_DATA;
+//         }
+//     }
+
+//     return error;
+// }
 
 int CheckFreeElementsPrev (list_t *list)
 {

@@ -20,8 +20,23 @@ const size_t kListMaxLen         = (1UL << 32);
         {                                   \
             int status = action;            \
             DEBUG_VAR("%d", status);        \
+                                            \
             if (status != LIST_ERROR_OK)    \
                 return status;              \
+        } while (0)                       
+
+#define LIST_DO_AND_CLEAR(action, clearAction)      \
+        do                                          \
+        {                                           \
+            int status = action;                    \
+            DEBUG_VAR("%d", status);                \
+                                                    \
+            if (status != LIST_ERROR_OK)            \
+            {                                       \
+                clearAction;                        \
+                                                    \
+                return status;                      \
+            }                                       \
         } while (0)                       
 
 #ifdef PRINT_DEBUG
